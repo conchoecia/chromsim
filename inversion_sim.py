@@ -178,14 +178,45 @@ class Chrom():
         axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
 
+        # plot m values on the second subplot
+        cycles=[x for x in self.trace_m.keys()]
+        m_values=[y for y in self.trace_m.values()]
+        axes[1].plot(cycles, m_values, lw=setlw*2)
 
-        axes[1].plot([x for x in self.trace_m.keys()], [y for y in self.trace_m.values()], lw=setlw)
+        # plot 95 percentile of m value normal distribution
+        from scipy import stats
+        import math
+        import numpy as np
+
+        burn_in=0.25
+        burnt_m_values=np.array(m_values[math.floor(self.cycle*burn_in):])
+        mu=np.mean(burnt_m_values)
+        var=np.var(burnt_m_values)
+        sigma=math.sqrt(var)
+        pdf_space=np.linspace(min(burnt_m_values)/2, max(burnt_m_values), 100)
+        normpdf=stats.norm.pdf(pdf_space, mu, sigma)
+        scaled_normpdf=normpdf/max(normpdf)*self.cycle/10
+        upper_bound=mu+1.96*sigma
+        lower_bound=mu-1.96*sigma
+        crossed_lower_bound_at=0
+        for k in self.trace_m.items():
+            if k[1] >= lower_bound:
+                crossed_lower_bound_at=k[0]
+                break
+        print(crossed_lower_bound_at)
+        axes[1].axhline(y=upper_bound, color='red', lw=setlw*5) # plot upper bound of the 95 percentile
+        axes[1].axhline(y=lower_bound, color='red', lw=setlw*5) # plot lower bound of the 95 percentile
+        axes[1].fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
+        axes[1].axvline(x=self.cycle*burn_in, lw=setlw*5, color='black') # plot the x value of the burn-in
+        axes[1].axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
+        axes[1].plot(scaled_normpdf, pdf_space, lw=setlw, color='orange') # plot the normal distribution of the m values along the y axis
         
         plt.xlabel("inversion cycle")
         axes[0].set_ylabel("Unique interactions")
         axes[1].set_ylabel(r"$m$")
-        # save this as a pdf
+        # save this as a pdf and png
         plt.savefig("inversion_sim.pdf")
+        plt.savefig("inversion_sim.png")
 
         # save the trace as a yaml file
         import yaml
