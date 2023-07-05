@@ -24,8 +24,10 @@ class Chrom():
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
+        self.trace_m={}
         self.cycle = 0
         self.update_seen()
+        self.calculate_m()
     
     def simulation_cycle(self, iterations = 0, until_converged = False):
         """
@@ -59,6 +61,7 @@ class Chrom():
         i2 = sortedi[1]
         self.gene_list[i1:i2] = self.gene_list[i1:i2][::-1]
         self.update_seen()
+        self.calculate_m()
         self.cycle += 1
     
     def update_seen(self):
@@ -98,6 +101,19 @@ class Chrom():
                         self.trace_AtoB[this_edge[j]][-1] += 1
                     if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
                         self.trace_BtoA[this_edge[j]][-1] += 1
+
+    """
+    calculate m of the current gene sequence
+    """
+    def calculate_m(self):
+        sequence=''.join([gene[0] for gene in self.gene_list])
+        substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
+        A = sequence.count('A')
+        B = sequence.count('B')
+        AB = substrings.count('AB')
+        BA = substrings.count('BA')
+        m = (AB + BA - 1)/ ((2* A * B)/(A+B) - 1)
+        self.trace_m[self.cycle]=m
 
     def _median(self, lst):
         sortedLst = sorted(lst)
@@ -169,7 +185,7 @@ class Chrom():
         import yaml
         with open("inversion_sim.yaml", "w") as f:
             yaml.dump(self.trace, f)
-        
+
 def main():
     iterations = 100000
     chrom = Chrom(10000000, 500, 400)
