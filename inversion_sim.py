@@ -153,31 +153,37 @@ class Chrom():
         A_alpha   = max(1/self.genesA, 0.05)
         B_alpha   = max(1/self.genesB, 0.05)
         all_alpha = max(1/(self.genesA + self.genesB), 0.05)
+        figsize=(10, 15)
 
+        fig, axes=plt.subplots(2, 1, sharex=True, figsize=figsize)
+        
         # set up the panel
         for k in self.trace:
-            plt.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
+            axes[0].plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                      self.trace[k], color='black', lw = setlw, alpha=all_alpha)
-        plt.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
+        axes[0].plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                  self._median_of_trace(self.trace), color='black', lw = setlw*10, alpha=0.75)
  
         # now plot the A-to-B and B-to-A traces
         for k in self.trace_AtoB:
-            plt.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
+            axes[0].plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                      self.trace_AtoB[k], color='blue', lw = setlw, alpha=A_alpha)
-        plt.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
+        axes[0].plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                  self._median_of_trace(self.trace_AtoB), color='blue', lw = setlw*10, alpha=0.75)
 
 
         for k in self.trace_BtoA:
-            plt.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
+            axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                      self.trace_BtoA[k], color='red', lw = setlw, alpha=B_alpha)
-        plt.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
+        axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
 
- 
+
+        axes[1].plot([x for x in self.trace_m.keys()], [y for y in self.trace_m.values()], lw=setlw)
+        
         plt.xlabel("inversion cycle")
-        plt.ylabel("Unique interactions")
+        axes[0].set_ylabel("Unique interactions")
+        axes[1].set_ylabel(r"$m$")
         # save this as a pdf
         plt.savefig("inversion_sim.pdf")
 
