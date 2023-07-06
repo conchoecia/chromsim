@@ -143,6 +143,7 @@ class Chrom():
         
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
+        plt.style.use('bmh')
 
         #print([k for k in  self.trace_AtoB])
         #print("A.1: ", self.trace_AtoB["A.1"])
@@ -181,7 +182,7 @@ class Chrom():
         # plot m values on the second subplot
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
-        axes[1].plot(cycles, m_values, lw=setlw*2)
+        axes[1].plot(cycles, m_values, lw=setlw*2, color='blue', label=r"$m$")
 
         # plot 95 percentile of m value normal distribution
         from scipy import stats
@@ -189,7 +190,8 @@ class Chrom():
         import numpy as np
 
         burn_in=0.25
-        burnt_m_values=np.array(m_values[math.floor(self.cycle*burn_in):])
+        start_norm_at=math.floor(self.cycle*burn_in)
+        burnt_m_values=np.array(m_values[start_norm_at:])
         mu=np.mean(burnt_m_values)
         var=np.var(burnt_m_values)
         sigma=math.sqrt(var)
@@ -203,16 +205,24 @@ class Chrom():
             if k[1] >= lower_bound:
                 crossed_lower_bound_at=k[0]
                 break
-        print(crossed_lower_bound_at)
-        axes[1].axhline(y=upper_bound, color='red', lw=setlw*5) # plot upper bound of the 95 percentile
-        axes[1].axhline(y=lower_bound, color='red', lw=setlw*5) # plot lower bound of the 95 percentile
+        bbox=dict(facecolor = 'white', alpha=0.5, boxstyle='round, pad=0.5', edgecolor='gray')
+        crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of cycles)".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
+        burn_in_text="burn-in:\n{cycle} cycles\n({perc:.0f}% of cycles)".format(cycle=start_norm_at, perc=burn_in*100)
+        norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=burn_in*100)
+        axes[1].axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
+        axes[1].axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
+        axes[1].text(y=upper_bound, x=self.cycle, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
+        axes[1].text(y=lower_bound, x=self.cycle, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
         axes[1].fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
-        axes[1].axvline(x=self.cycle*burn_in, lw=setlw*5, color='black') # plot the x value of the burn-in
+        axes[1].axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
         axes[1].axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-        axes[1].plot(scaled_normpdf, pdf_space, lw=setlw, color='orange') # plot the normal distribution of the m values along the y axis
+        axes[1].text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
+        axes[1].text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
+        axes[1].plot(scaled_normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
         
+        axes[1].legend(facecolor='white', framealpha=0.5, edgecolor='gray')
         plt.xlabel("inversion cycle")
-        axes[0].set_ylabel("Unique interactions")
+        axes[0].set_ylabel("unique interactions")
         axes[1].set_ylabel(r"$m$")
         # save this as a pdf and png
         plt.savefig("inversion_sim.pdf")
@@ -224,7 +234,7 @@ class Chrom():
             yaml.dump(self.trace, f)
 
 def main():
-    iterations = 100000
+    iterations = 10000#0
     chrom = Chrom(10000000, 500, 400)
     chrom.simulation_cycle(iterations = iterations)
     chrom.plot_results()
