@@ -142,6 +142,12 @@ class Chrom():
         # The index of the list is the x-axis, the value is the y-axis.
 
         # calculate all the values
+        from scipy import stats
+        import math
+        import numpy as np
+
+        cycles=[x for x in self.trace_m.keys()]
+        m_values=[y for y in self.trace_m.values()]
         burn_in=0.25
         start_norm_at=math.floor(self.cycle*burn_in)
         burnt_m_values=np.array(m_values[start_norm_at:])
@@ -159,6 +165,7 @@ class Chrom():
                 crossed_lower_bound_at=k[0]
                 break
         cycle_limit=start_norm_at*2
+        sample_limit=cycle_limit//self.sample_rate
 
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
@@ -182,9 +189,10 @@ class Chrom():
         subplot0_title=r"number of unique interactions after $n$ inversion cycles"
         subplot1_title=r"$m$ after $n$ inversion cycles"
         
-        fig, axes=plt.subplots(2, 1, sharex=True, figsize=figsize)
+        fig, axes=plt.subplots(2, 1, figsize=figsize)
         
         # set up the panel
+        axes[0].set_xlim(0, self.cycle)
         for k in self.trace:
             axes[0].plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                      self.trace[k], color='black', lw = setlw, alpha=all_alpha)
@@ -204,28 +212,23 @@ class Chrom():
                      self.trace_BtoA[k], color='red', lw = setlw, alpha=B_alpha)
         axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
-
-        # plot m values on the second subplot
-        cycles=[x for x in self.trace_m.keys()]
-        m_values=[y for y in self.trace_m.values()]
-        axes[1].plot(cycles, m_values, lw=setlw*2, color='blue', label=r"$m$")
+        
+        #plot m values on the second subplot
+        axes[1].set_xlim([0, cycle_limit])
+        axes[1].plot(cycles[:cycle_limit], m_values[:cycle_limit], lw=setlw*2, color='blue', label=r"$m$")
 
         # plot 95 percentile of m value normal distribution
-        from scipy import stats
-        import math
-        import numpy as np
-
         crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of cycles)".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
         burn_in_text="burn-in:\n{cycle} cycles\n({perc:.0f}% of cycles)".format(cycle=start_norm_at, perc=burn_in*100)
         norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=burn_in*100)
         axes[1].axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
         axes[1].axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
-        axes[1].text(y=upper_bound, x=self.cycle, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
-        axes[1].text(y=lower_bound, x=self.cycle, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
+        axes[1].text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
+        axes[1].text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
         axes[1].fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
-        axes[1].axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
+        #axes[1].axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
         axes[1].axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-        axes[1].text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
+        #axes[1].text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
         axes[1].text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
         axes[1].plot(scaled_normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
 
@@ -269,7 +272,7 @@ def main():
     chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
     print("running simulations...")
     for chrom in chroms: # run all simulations
-        chrom.simulation_cycle(iterations = iterations)
+        chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("plotting results...")
     for chrom in chroms: # plot all results
         chrom.plot_results()
