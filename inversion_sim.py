@@ -11,7 +11,7 @@ import sys
 
 class Chrom():
     def __init__(self, size, gene_quantityA, gene_quantityB):
-        self.length = size
+        self.length = size # is this even relevant when gene_quantityA and gene_quantityB are specified?
         self.genesA = gene_quantityA
         self.genesB = gene_quantityB
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
@@ -19,7 +19,7 @@ class Chrom():
         self.seen = {}
         self.sample_frequency = .01 # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
         self.sample_rate = int( 1 / self.sample_frequency)
-        print("sample rate: every ", self.sample_rate, " iterations sampled")
+        #print("sample rate: every ", self.sample_rate, " iterations sampled")
         # this tracks how many new interactions were added at each cycle
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
@@ -46,9 +46,9 @@ class Chrom():
                 # use a carriage return to stay on the same line
                 # use format string to make the number occupy 10 spaces.
                 # separate with a space character, then plot the percentage.
-                print("\r{0:15d}  {1:.2f}%  ".format(i, (i/iterations)*100), end="")
+                print("\r|A|={Asize:5d}, |B|={Bsize:5d}: {cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
             self.shuffle()
-        print("{0:15d}  100.00%  ".format(i+1))
+        print("{cycle:15d}  100.00%  ".format(cycle=i+1))
         print("")
  
     def shuffle(self):
@@ -140,7 +140,26 @@ class Chrom():
         """
         # Use matplotlib to plot each key's list as a line.
         # The index of the list is the x-axis, the value is the y-axis.
-        
+
+        # calculate all the values
+        burn_in=0.25
+        start_norm_at=math.floor(self.cycle*burn_in)
+        burnt_m_values=np.array(m_values[start_norm_at:])
+        mu=np.mean(burnt_m_values)
+        var=np.var(burnt_m_values)
+        sigma=math.sqrt(var)
+        pdf_space=np.linspace(0, 2, 100)
+        normpdf=stats.norm.pdf(pdf_space, mu, sigma)
+        scaled_normpdf=normpdf/max(normpdf)*self.cycle/10
+        upper_bound=mu+1.96*sigma
+        lower_bound=mu-1.96*sigma
+        crossed_lower_bound_at=0
+        for k in self.trace_m.items():
+            if k[1] >= lower_bound:
+                crossed_lower_bound_at=k[0]
+                break
+        cycle_limit=start_norm_at*2
+
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
         plt.style.use('bmh')
@@ -155,7 +174,14 @@ class Chrom():
         B_alpha   = max(1/self.genesB, 0.05)
         all_alpha = max(1/(self.genesA + self.genesB), 0.05)
         figsize=(10, 15)
+        bbox=dict(facecolor = 'white', alpha=0.5, boxstyle='round, pad=0.5', edgecolor='gray')
+        plot_title_size=20
+        subplot_title_size=15
 
+        plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=self.genesA, Bsize=self.genesB, cycles=self.cycle)
+        subplot0_title=r"number of unique interactions after $n$ inversion cycles"
+        subplot1_title=r"$m$ after $n$ inversion cycles"
+        
         fig, axes=plt.subplots(2, 1, sharex=True, figsize=figsize)
         
         # set up the panel
@@ -189,23 +215,6 @@ class Chrom():
         import math
         import numpy as np
 
-        burn_in=0.25
-        start_norm_at=math.floor(self.cycle*burn_in)
-        burnt_m_values=np.array(m_values[start_norm_at:])
-        mu=np.mean(burnt_m_values)
-        var=np.var(burnt_m_values)
-        sigma=math.sqrt(var)
-        pdf_space=np.linspace(min(burnt_m_values)/2, max(burnt_m_values), 100)
-        normpdf=stats.norm.pdf(pdf_space, mu, sigma)
-        scaled_normpdf=normpdf/max(normpdf)*self.cycle/10
-        upper_bound=mu+1.96*sigma
-        lower_bound=mu-1.96*sigma
-        crossed_lower_bound_at=0
-        for k in self.trace_m.items():
-            if k[1] >= lower_bound:
-                crossed_lower_bound_at=k[0]
-                break
-        bbox=dict(facecolor = 'white', alpha=0.5, boxstyle='round, pad=0.5', edgecolor='gray')
         crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of cycles)".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
         burn_in_text="burn-in:\n{cycle} cycles\n({perc:.0f}% of cycles)".format(cycle=start_norm_at, perc=burn_in*100)
         norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=burn_in*100)
@@ -219,25 +228,52 @@ class Chrom():
         axes[1].text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
         axes[1].text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
         axes[1].plot(scaled_normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
-        
+
         axes[1].legend(facecolor='white', framealpha=0.5, edgecolor='gray')
         plt.xlabel("inversion cycle")
         axes[0].set_ylabel("unique interactions")
         axes[1].set_ylabel(r"$m$")
+        fig.suptitle(plot_title, fontsize=plot_title_size)
+        axes[0].set_title(subplot0_title)
+        axes[1].set_title(subplot1_title)
+
+        output_dir='diagrams/'
+        output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
+
+        # create the diagram directory if it does not exist yet
+        import os
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        if not os.path.exists(output_dir+'/pdf'):
+            os.makedirs(output_dir+'/pdf')
+        if not os.path.exists(output_dir+'/png'):
+            os.makedirs(output_dir+'/png')
+        if not os.path.exists(output_dir+'/yaml'):
+            os.makedirs(output_dir+'/yaml')
+        
         # save this as a pdf and png
-        plt.savefig("inversion_sim.pdf")
-        plt.savefig("inversion_sim.png")
+        plt.savefig(output_dir+'pdf/'+output_name+'.pdf')
+        plt.savefig(output_dir+'png/'+output_name+'.png')
 
         # save the trace as a yaml file
         import yaml
-        with open("inversion_sim.yaml", "w") as f:
+        with open(output_dir+'yaml/'+output_name+'.yaml', "w") as f:
             yaml.dump(self.trace, f)
 
 def main():
-    iterations = 10000#0
-    chrom = Chrom(10000000, 500, 400)
-    chrom.simulation_cycle(iterations = iterations)
-    chrom.plot_results()
+    iterations = 100000
+    #chrom = Chrom(10000000, 500, 400)
+    
+    size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
+    print("creating chromosomes...")
+    chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
+    print("running simulations...")
+    for chrom in chroms: # run all simulations
+        chrom.simulation_cycle(iterations = iterations)
+    print("plotting results...")
+    for chrom in chroms: # plot all results
+        chrom.plot_results()
+
 
 if __name__ == "__main__":
     main()
