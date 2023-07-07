@@ -156,7 +156,7 @@ class Chrom():
         sigma=math.sqrt(var)
         pdf_space=np.linspace(0, 2, 100)
         normpdf=stats.norm.pdf(pdf_space, mu, sigma)
-        scaled_normpdf=normpdf/max(normpdf)*self.cycle/10
+        scaled_normpdf=normpdf/max(normpdf)*cycle_limit/10
         upper_bound=mu+1.96*sigma
         lower_bound=mu-1.96*sigma
         crossed_lower_bound_at=0
@@ -164,7 +164,8 @@ class Chrom():
             if k[1] >= lower_bound:
                 crossed_lower_bound_at=k[0]
                 break
-        cycle_limit=start_norm_at*2
+        cycle_limit=crossed_lower_bound_at*2
+        print(cycle_limit)
         sample_limit=cycle_limit//self.sample_rate
 
         # initialize the matplotlib plot
@@ -214,6 +215,9 @@ class Chrom():
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
         
         #plot m values on the second subplot
+        print(cycle_limit)
+        print(cycles[cycle_limit])
+        print(m_values[cycle_limit])
         axes[1].set_xlim([0, cycle_limit])
         axes[1].plot(cycles[:cycle_limit], m_values[:cycle_limit], lw=setlw*2, color='blue', label=r"$m$")
 
@@ -264,7 +268,7 @@ class Chrom():
             yaml.dump(self.trace, f)
 
 def main():
-    iterations = 100000
+    iterations = 10000#0
     #chrom = Chrom(10000000, 500, 400)
     
     size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
