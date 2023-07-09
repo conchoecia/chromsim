@@ -2,8 +2,8 @@
 
 ## current
 
-- find out what the heck is wrong with the x axis scaling
-- move normal distribution to separate plot
+- adjust sampling rate for low gene counts
+- expand interactions to a window beyond the nearest neighbor genes
 
 ## at some point
 

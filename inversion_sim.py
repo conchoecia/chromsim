@@ -61,8 +61,8 @@ class Chrom():
         i2 = sortedi[1]
         self.gene_list[i1:i2] = self.gene_list[i1:i2][::-1]
         self.update_seen()
-        self.calculate_m()
         self.cycle += 1
+        self.calculate_m()
     
     def update_seen(self):
         """
@@ -114,6 +114,9 @@ class Chrom():
         BA = substrings.count('BA')
         m = (AB + BA - 1)/ ((2* A * B)/(A+B) - 1)
         self.trace_m[self.cycle]=m
+        #
+        #if self.cycle <= 10:
+        #    print(sequence+": "+str(m))
 
     def _median(self, lst):
         sortedLst = sorted(lst)
@@ -148,15 +151,16 @@ class Chrom():
 
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
+        #print(m_values[0])
         burn_in=0.25
-        start_norm_at=math.floor(self.cycle*burn_in)
+        start_norm_at=math.floor((self.cycle+1)*burn_in)
         burnt_m_values=np.array(m_values[start_norm_at:])
         mu=np.mean(burnt_m_values)
         var=np.var(burnt_m_values)
         sigma=math.sqrt(var)
-        pdf_space=np.linspace(0, 2, 100)
+        pdf_space=np.linspace(0, max(burnt_m_values), 100)
         normpdf=stats.norm.pdf(pdf_space, mu, sigma)
-        scaled_normpdf=normpdf/max(normpdf)*cycle_limit/10
+        normpdf/=max(normpdf)
         upper_bound=mu+1.96*sigma
         lower_bound=mu-1.96*sigma
         crossed_lower_bound_at=0
@@ -164,85 +168,100 @@ class Chrom():
             if k[1] >= lower_bound:
                 crossed_lower_bound_at=k[0]
                 break
-        cycle_limit=crossed_lower_bound_at*2
-        print(cycle_limit)
-        sample_limit=cycle_limit//self.sample_rate
+        cycle_limit=crossed_lower_bound_at*2+1
+        sample_limit=cycle_limit//self.sample_rate+1
+        #scaled_normpdf=normpdf/max(normpdf)*cycle_limit/10
+        #print("Debug:")
+        #print(m_values[0:11])
+        #print(cycles[0:11])
 
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
-        plt.style.use('bmh')
 
         #print([k for k in  self.trace_AtoB])
         #print("A.1: ", self.trace_AtoB["A.1"])
         #print([k for k in  self.trace_BtoA], self.trace_BtoA)
 
+        # set up the figure
+        #fig, axes=plt.subplots(2, 1, figsize=figsize)
+        figsize=(20, 15)
+        fig=plt.figure(figsize=figsize)
+        gs=fig.add_gridspec(2, 2, width_ratios=[3, 1])
+        ax0=fig.add_subplot(gs[0, :]) # add subplot for gene interaction traces spanning the top half
+        ax1=fig.add_subplot(gs[1, 0]) # add subplot for m values
+        ax2=fig.add_subplot(gs[1, 1], sharey=ax1) # add subplot for m value normal distribution
+
+        # figure styling
+        plt.style.use('bmh')
         setlw = 0.2
         seta  = 0.1
         A_alpha   = max(1/self.genesA, 0.05)
         B_alpha   = max(1/self.genesB, 0.05)
         all_alpha = max(1/(self.genesA + self.genesB), 0.05)
-        figsize=(10, 15)
-        bbox=dict(facecolor = 'white', alpha=0.5, boxstyle='round, pad=0.5', edgecolor='gray')
+        fc='white'
+        box_alpha=0.5
+        ec='gray'
+        bbox=dict(facecolor=fc, alpha=box_alpha, boxstyle='round, pad=0.5', edgecolor=ec)
         plot_title_size=20
         subplot_title_size=15
 
+        # set plot titles
         plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=self.genesA, Bsize=self.genesB, cycles=self.cycle)
         subplot0_title=r"number of unique interactions after $n$ inversion cycles"
         subplot1_title=r"$m$ after $n$ inversion cycles"
-        
-        fig, axes=plt.subplots(2, 1, figsize=figsize)
-        
-        # set up the panel
-        axes[0].set_xlim(0, self.cycle)
+
+        # plot gene interaction trace
+        ax0.set_xlim(0, self.cycle)
         for k in self.trace:
-            axes[0].plot([x*self.sample_rate for x in range(len(self.trace[k]))],
+            ax0.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                      self.trace[k], color='black', lw = setlw, alpha=all_alpha)
-        axes[0].plot([x*self.sample_rate for x in range(len(self.trace[k]))],
+        ax0.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                  self._median_of_trace(self.trace), color='black', lw = setlw*10, alpha=0.75)
  
         # now plot the A-to-B and B-to-A traces
         for k in self.trace_AtoB:
-            axes[0].plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
+            ax0.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                      self.trace_AtoB[k], color='blue', lw = setlw, alpha=A_alpha)
-        axes[0].plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
+        ax0.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                  self._median_of_trace(self.trace_AtoB), color='blue', lw = setlw*10, alpha=0.75)
 
 
         for k in self.trace_BtoA:
-            axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
+            ax0.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                      self.trace_BtoA[k], color='red', lw = setlw, alpha=B_alpha)
-        axes[0].plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
+        ax0.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
         
         #plot m values on the second subplot
-        print(cycle_limit)
-        print(cycles[cycle_limit])
-        print(m_values[cycle_limit])
-        axes[1].set_xlim([0, cycle_limit])
-        axes[1].plot(cycles[:cycle_limit], m_values[:cycle_limit], lw=setlw*2, color='blue', label=r"$m$")
+        ax1.set_xlim([0, cycle_limit])
+        ax1.plot(cycles[:cycle_limit+1], m_values[:cycle_limit+1], lw=setlw*2, color='blue', label=r"$m$")
 
         # plot 95 percentile of m value normal distribution
-        crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of cycles)".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
+        crossed_text="first 95 percentile value:\n{cross} cycles".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
         burn_in_text="burn-in:\n{cycle} cycles\n({perc:.0f}% of cycles)".format(cycle=start_norm_at, perc=burn_in*100)
         norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=burn_in*100)
-        axes[1].axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
-        axes[1].axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
-        axes[1].text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
-        axes[1].text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
-        axes[1].fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
-        #axes[1].axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
-        axes[1].axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-        #axes[1].text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
-        axes[1].text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
-        axes[1].plot(scaled_normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
+        ax1.axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
+        ax1.axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
+        ax1.text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
+        ax1.text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
+        ax1.fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
+        #ax1.axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
+        ax1.axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
+        #ax1.text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
+        ax1.text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
 
-        axes[1].legend(facecolor='white', framealpha=0.5, edgecolor='gray')
-        plt.xlabel("inversion cycle")
-        axes[0].set_ylabel("unique interactions")
-        axes[1].set_ylabel(r"$m$")
+        # plot normal distribution next to m plot
+        ax2.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
+        
+        ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
+        ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
+        ax0.set_xlabel("inversion cycle")
+        ax0.set_ylabel("unique interactions")
+        ax1.set_xlabel("inversion cycle")
+        ax1.set_ylabel(r"$m$")
         fig.suptitle(plot_title, fontsize=plot_title_size)
-        axes[0].set_title(subplot0_title)
-        axes[1].set_title(subplot1_title)
+        ax0.set_title(subplot0_title)
+        ax1.set_title(subplot1_title)
 
         output_dir='diagrams/'
         output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
@@ -268,7 +287,9 @@ class Chrom():
             yaml.dump(self.trace, f)
 
 def main():
-    iterations = 10000#0
+    import time
+    start=time.time()
+    iterations = 100000
     #chrom = Chrom(10000000, 500, 400)
     
     size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
@@ -281,6 +302,9 @@ def main():
     for chrom in chroms: # plot all results
         chrom.plot_results()
 
+    end=time.time()
+    elapsed=end-start
+    print("elapsed time: {minutes:2d}:{seconds:2d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
 
 if __name__ == "__main__":
     main()
