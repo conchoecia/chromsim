@@ -180,3 +180,5 @@ pyrightconfig.json
 *.yaml
 *.png
 *~
+diagrams/
+diagrams.old/
