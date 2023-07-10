@@ -295,21 +295,53 @@ class Chrom():
         with open(output_dir+'yaml/'+output_name+'.yaml', "w") as f:
             yaml.dump(self.trace, f)
 
+def print_usage():
+    message="""
+    usage: inversion_sim.py <Asize> <Bsize>
+
+    - Asize: number of genes in group A (int)
+    - Bsize: number of genes in group B (int) 
+    """
+    print(message)
+            
 def main():
     import time
-    start=time.time()
+    import sys
+    
     iterations = 100000
     
     size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
-    print("creating chromosomes...")
-    chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
-    print("running simulations...")
-    for chrom in chroms: # run all simulations
-        chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
+
+    # handle command line arguments
+    if len(sys.argv) != 3:
+        print_usage()
+        return
+
+    Asize=-1
+    Bsize=-1
+    try:
+        Asize=int(sys.argv[1])
+        Bsize=int(sys.argv[2])
+        print(Asize, Bsize)
+    except ValueError:
+        print_usage()
+
+    print(Asize, Bsize)
+    # start a timer
+    start=time.time()
+
+    print("creating chromosome...")
+    chrom=Chrom(Asize+Bsize, Asize, Bsize)
+    #chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
+    print("running simulation...")
+    chrom.simulation_cycle(iterations=iterations)
+    #for chrom in chroms: # run all simulations
+    #    chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("plotting results...")
-    for chrom in chroms: # plot all results
-        print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
-        chrom.plot_results()
+    chrom.plot_results()
+    #for chrom in chroms: # plot all results
+    #    print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
+    #    chrom.plot_results()
 
     end=time.time()
     elapsed=end-start

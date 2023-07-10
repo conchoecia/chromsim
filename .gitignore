@@ -181,4 +181,4 @@ pyrightconfig.json
 *.png
 *~
 diagrams/
-diagrams.old/
+diagrams.old*/

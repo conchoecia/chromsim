@@ -13,5 +13,6 @@ https://www.nature.com/articles/s41586-023-05936-6
 
 ## at some point
 
-- (macrosynteny) DCJ- adjust sampling rate for low gene counts
+- (macrosynteny) DCJ
+- adjust sampling rate for low gene counts
 - expand interactions to a window beyond the nearest neighbor genes
