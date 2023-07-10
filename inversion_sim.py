@@ -28,6 +28,18 @@ class Chrom():
         self.cycle = 0
         self.update_seen()
         self.calculate_m()
+        self.last_i0=0
+        self.last_i1=self.genesA+self.genesB
+        self.log=[str(self)]
+
+    def __str__(self):
+        format_string="cycle: {cycle:10d}; last inversion: {start} {istart:5d} {inverted} {iend:<5d} {end}; m: {m:1.3f}"
+        AB_string=self.get_AB_string()
+        i0=self.last_i0
+        i1=self.last_i1
+        m=self.trace_m[self.cycle]
+        ret=format_string.format(cycle=self.cycle, start=AB_string[0:i0], istart=i0, inverted=AB_string[i0:i1], iend=i1-1, end=AB_string[i1:len(AB_string)], m=m)
+        return ret
     
     def simulation_cycle(self, iterations = 0, until_converged = False):
         """
@@ -54,15 +66,18 @@ class Chrom():
     def shuffle(self):
         # Randomly pick two indices in the list.
         # Start at one and end at len-1 to not destroy telomeres
+        i0 = random.randint(1, len(self.gene_list)-1)
         i1 = random.randint(1, len(self.gene_list)-1)
-        i2 = random.randint(1, len(self.gene_list)-1)
-        sortedi = sorted([i1, i2]) 
-        i1 = sortedi[0]
-        i2 = sortedi[1]
-        self.gene_list[i1:i2] = self.gene_list[i1:i2][::-1]
+        sortedi = sorted([i0, i1]) 
+        i0 = sortedi[0]
+        i1 = sortedi[1]
+        self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
         self.update_seen()
         self.cycle += 1
         self.calculate_m()
+        self.last_i0=i0
+        self.last_i1=i1
+        self.log.append(str(self))
     
     def update_seen(self):
         """
@@ -102,11 +117,14 @@ class Chrom():
                     if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
                         self.trace_BtoA[this_edge[j]][-1] += 1
 
+    def get_AB_string(self):
+        return ''.join([gene[0] for gene in self.gene_list])
+
     """
     calculate m of the current gene sequence
     """
     def calculate_m(self):
-        sequence=''.join([gene[0] for gene in self.gene_list])
+        sequence=self.get_AB_string()
         substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
         A = sequence.count('A')
         B = sequence.count('B')
@@ -300,11 +318,15 @@ def main():
         chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("plotting results...")
     for chrom in chroms: # plot all results
+        #print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
         chrom.plot_results()
 
     end=time.time()
     elapsed=end-start
     print("elapsed time: {minutes:2d}:{seconds:2d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
+
+    for entry in chroms[0].log:
+        print(entry)
 
 if __name__ == "__main__":
     main()
