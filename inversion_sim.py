@@ -19,7 +19,6 @@ class Chrom():
         self.seen = {}
         self.sample_frequency = .01 # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
         self.sample_rate = int( 1 / self.sample_frequency)
-        #print("sample rate: every ", self.sample_rate, " iterations sampled")
         # this tracks how many new interactions were added at each cycle
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
@@ -28,6 +27,8 @@ class Chrom():
         self.cycle = 0
         self.update_seen()
         self.calculate_m()
+
+        # the following is just for logging/debugging purposes
         self.last_i0=0
         self.last_i1=self.genesA+self.genesB
         self.log=[str(self)]
@@ -60,8 +61,7 @@ class Chrom():
                 # separate with a space character, then plot the percentage.
                 print("\r|A|={Asize:5d}, |B|={Bsize:5d}: {cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
             self.shuffle()
-        print("{cycle:15d}  100.00%  ".format(cycle=i+1))
-        print("")
+        print("{cycle:15d}  100.00%  /n".format(cycle=i+1))
  
     def shuffle(self):
         # Randomly pick two indices in the list.
@@ -75,6 +75,8 @@ class Chrom():
         self.update_seen()
         self.cycle += 1
         self.calculate_m()
+
+        #log the current state
         self.last_i0=i0
         self.last_i1=i1
         self.log.append(str(self))
@@ -132,10 +134,7 @@ class Chrom():
         BA = substrings.count('BA')
         m = (AB + BA - 1)/ ((2* A * B)/(A+B) - 1)
         self.trace_m[self.cycle]=m
-        #
-        #if self.cycle <= 10:
-        #    print(sequence+": "+str(m))
-
+        
     def _median(self, lst):
         sortedLst = sorted(lst)
         lstLen = len(lst)
@@ -169,7 +168,6 @@ class Chrom():
 
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
-        #print(m_values[0])
         burn_in=0.25
         start_norm_at=math.floor((self.cycle+1)*burn_in)
         burnt_m_values=np.array(m_values[start_norm_at:])
@@ -188,10 +186,6 @@ class Chrom():
                 break
         cycle_limit=crossed_lower_bound_at*2+1
         sample_limit=cycle_limit//self.sample_rate+1
-        #scaled_normpdf=normpdf/max(normpdf)*cycle_limit/10
-        #print("Debug:")
-        #print(m_values[0:11])
-        #print(cycles[0:11])
 
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
@@ -201,7 +195,6 @@ class Chrom():
         #print([k for k in  self.trace_BtoA], self.trace_BtoA)
 
         # set up the figure
-        #fig, axes=plt.subplots(2, 1, figsize=figsize)
         figsize=(20, 15)
         fig=plt.figure(figsize=figsize)
         gs=fig.add_gridspec(2, 2, width_ratios=[3, 1])
@@ -263,9 +256,7 @@ class Chrom():
         ax1.text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
         ax1.text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
         ax1.fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
-        #ax1.axvline(x=start_norm_at, lw=setlw*5, color='black') # plot the x value of the burn-in
         ax1.axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-        #ax1.text(x=start_norm_at, y=0.2, ha='left', va='center', s=burn_in_text, bbox=bbox)
         ax1.text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
 
         # plot normal distribution next to m plot
@@ -308,7 +299,6 @@ def main():
     import time
     start=time.time()
     iterations = 100000
-    #chrom = Chrom(10000000, 500, 400)
     
     size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
     print("creating chromosomes...")
@@ -318,15 +308,12 @@ def main():
         chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("plotting results...")
     for chrom in chroms: # plot all results
-        #print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
+        print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
         chrom.plot_results()
 
     end=time.time()
     elapsed=end-start
     print("elapsed time: {minutes:2d}:{seconds:2d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
-
-    for entry in chroms[0].log:
-        print(entry)
 
 if __name__ == "__main__":
     main()
