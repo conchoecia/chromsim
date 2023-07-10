@@ -25,7 +25,6 @@ elif |A| + |B| <= 100, sample rate 0.5
 elif |A| + |B| <= 500, sample rate 0.1
 else sample rate 0.01"""
         # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
-        
         self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
         self.sample_rate = int( 1 / self.sample_frequency)
 
@@ -61,18 +60,41 @@ else sample rate 0.01"""
             raise ValueError("Please specify either iterations or until_converged.")
         # until_converged hasn't been implemented yet, so tell the user that this isn't possible now
         if until_converged:
-            raise NotImplementedError("This function is not yet implemented.")
-        # run the simulation for the specified number of iterations
-        for i in range(iterations):
-            # make a progress bar that stays on the same line that prints every 100 cycles
-            if i % 100 == 0:
-                # use a carriage return to stay on the same line
-                # use format string to make the number occupy 10 spaces.
-                # separate with a space character, then plot the percentage.
-                print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
-            self.shuffle()
-        print("{cycle:15d}  100.00%".format(cycle=i+1))
- 
+            converging_at=self.calculate_convergence()
+            print(converging_at)
+            while len(self.seen) < converging_at: 
+                self.shuffle()
+                #if len(self.seen) == self.size*(self.size-1)-1:
+                #    converged=True
+                #    print(self.seen)
+                
+                #converged=True
+                #for k in self.trace:
+                #    print(self.trace[k])
+                #    if len(self.trace[k]) < len(self.gene_list):
+                #        converged=False
+            #raise NotImplementedError("This function is not yet implemented.")
+        else:
+            # run the simulation for the specified number of iterations
+            for i in range(iterations):
+                # make a progress bar that stays on the same line that prints every 100 cycles
+                if i % 100 == 0:
+                    # use a carriage return to stay on the same line
+                    # use format string to make the number occupy 10 spaces.
+                    # separate with a space character, then plot the percentage.
+                    print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
+                self.shuffle()
+            print("{cycle:15d}  100.00%".format(cycle=i+1))
+
+    """
+    calculates the number of possible unique gene interactions
+    """
+    def calculate_convergence(self):
+        conv=0
+        for i in range(self.genesA+self.genesB):
+            conv+=i
+        return conv-1
+    
     def shuffle(self):
         # Randomly pick two indices in the list.
         # Start at one and end at len-1 to not destroy telomeres
@@ -342,7 +364,7 @@ def main():
     chrom=Chrom(Asize+Bsize, Asize, Bsize)
     #chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
     print("running simulation...")
-    chrom.simulation_cycle(iterations=iterations)
+    chrom.simulation_cycle(until_converged=True)
     #for chrom in chroms: # run all simulations
     #    chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("plotting results...")
