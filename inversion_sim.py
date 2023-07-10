@@ -229,10 +229,13 @@ else sample rate 0.01"""
         # set up the figure
         figsize=(20, 15)
         fig=plt.figure(figsize=figsize)
-        gs=fig.add_gridspec(2, 2, width_ratios=[3, 1])
+        gs=fig.add_gridspec(3, 2, width_ratios=[3, 1])
         ax0=fig.add_subplot(gs[0, :]) # add subplot for gene interaction traces spanning the top half
-        ax1=fig.add_subplot(gs[1, 0]) # add subplot for m values
-        ax2=fig.add_subplot(gs[1, 1], sharey=ax1) # add subplot for m value normal distribution
+        ax1=fig.add_subplot(gs[2, 0]) # add subplot for m values
+        ax2=fig.add_subplot(gs[2, 1], sharey=ax1) # add subplot for m value normal distribution
+        ax3=fig.add_subplot(gs[1, 0], sharex=ax1) # add subplot for interactions in the range of the m plot
+        ax0.set_xlim(0, self.cycle)
+        ax1.set_xlim([0, cycle_limit])
 
         # figure styling
         plt.style.use('bmh')
@@ -252,31 +255,42 @@ else sample rate 0.01"""
         plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=self.genesA, Bsize=self.genesB, cycles=self.cycle)
         subplot0_title=r"number of unique interactions after $n$ inversion cycles"
         subplot1_title=r"$m$ after $n$ inversion cycles"
+        subplot3_title=r"number of unique interactions after $n$ inversion cycles (until cycle {})".format(cycle_limit)
 
         # plot gene interaction trace
-        ax0.set_xlim(0, self.cycle)
         for k in self.trace:
             ax0.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                      self.trace[k], color='black', lw = setlw, alpha=all_alpha)
+            ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                     self.trace[k][:cycle_limit+1], color='black', lw = setlw, alpha=all_alpha)
         ax0.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
                  self._median_of_trace(self.trace), color='black', lw = setlw*10, alpha=0.75)
+        ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                 self._median_of_trace(self.trace)[:cycle_limit+1], color='black', lw = setlw*10, alpha=0.75)
  
         # now plot the A-to-B and B-to-A traces
         for k in self.trace_AtoB:
             ax0.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                      self.trace_AtoB[k], color='blue', lw = setlw, alpha=A_alpha)
+            ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                     self.trace_AtoB[k][:cycle_limit+1], color='blue', lw = setlw, alpha=A_alpha)
         ax0.plot([x*self.sample_rate for x in range(len(self.trace_AtoB[k]))],
                  self._median_of_trace(self.trace_AtoB), color='blue', lw = setlw*10, alpha=0.75)
+        ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                 self._median_of_trace(self.trace_AtoB)[:cycle_limit+1], color='blue', lw = setlw*10, alpha=0.75)
 
 
         for k in self.trace_BtoA:
             ax0.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                      self.trace_BtoA[k], color='red', lw = setlw, alpha=B_alpha)
+            ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                     self.trace_BtoA[k][:cycle_limit+1], color='red', lw = setlw, alpha=B_alpha)
         ax0.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
+        ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
+                 self._median_of_trace(self.trace_BtoA)[:cycle_limit+1], color='red', lw = setlw*10, alpha=0.75)
         
         #plot m values on the second subplot
-        ax1.set_xlim([0, cycle_limit])
         ax1.plot(cycles[:cycle_limit+1], m_values[:cycle_limit+1], lw=setlw*2, color='blue', label=r"$m$")
 
         # plot 95 percentile of m value normal distribution
