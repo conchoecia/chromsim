@@ -14,11 +14,21 @@ class Chrom():
         self.length = size # is this even relevant when gene_quantityA and gene_quantityB are specified?
         self.genesA = gene_quantityA
         self.genesB = gene_quantityB
+        self.size=self.genesA+self.genesB
+
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
         # seen is a list of genes that have already interacted with each other, value is cycle
         self.seen = {}
-        self.sample_frequency = .01 # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
+
+        """if |A| + |B| <= 50, sample rate 1.0
+elif |A| + |B| <= 100, sample rate 0.5
+elif |A| + |B| <= 500, sample rate 0.1
+else sample rate 0.01"""
+        # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
+        
+        self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
         self.sample_rate = int( 1 / self.sample_frequency)
+
         # this tracks how many new interactions were added at each cycle
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
@@ -59,9 +69,9 @@ class Chrom():
                 # use a carriage return to stay on the same line
                 # use format string to make the number occupy 10 spaces.
                 # separate with a space character, then plot the percentage.
-                print("\r|A|={Asize:5d}, |B|={Bsize:5d}: {cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
+                print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
             self.shuffle()
-        print("{cycle:15d}  100.00%  /n".format(cycle=i+1))
+        print("{cycle:15d}  100.00%".format(cycle=i+1))
  
     def shuffle(self):
         # Randomly pick two indices in the list.
@@ -308,7 +318,7 @@ def main():
     import time
     import sys
     
-    iterations = 100000
+    iterations = 100#000
     
     size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
 
@@ -322,11 +332,9 @@ def main():
     try:
         Asize=int(sys.argv[1])
         Bsize=int(sys.argv[2])
-        print(Asize, Bsize)
     except ValueError:
         print_usage()
 
-    print(Asize, Bsize)
     # start a timer
     start=time.time()
 
@@ -345,7 +353,7 @@ def main():
 
     end=time.time()
     elapsed=end-start
-    print("elapsed time: {minutes:2d}:{seconds:2d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
+    print("elapsed time: {minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
 
 if __name__ == "__main__":
     main()
