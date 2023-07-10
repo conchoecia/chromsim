@@ -19,6 +19,7 @@ class Chrom():
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
         # seen is a list of genes that have already interacted with each other, value is cycle
         self.seen = {}
+        self.t50=-1
 
         """if |A| + |B| <= 50, sample rate 1.0
 elif |A| + |B| <= 100, sample rate 0.5
@@ -61,9 +62,10 @@ else sample rate 0.01"""
         # until_converged hasn't been implemented yet, so tell the user that this isn't possible now
         if until_converged:
             converging_at=self.calculate_convergence()
-            print(converging_at)
             while len(self.seen) < converging_at: 
                 self.shuffle()
+                if self.t50 < 0 and len(self.seen) >= converging_at/2:
+                    self.t50=self.cycle
                 #if len(self.seen) == self.size*(self.size-1)-1:
                 #    converged=True
                 #    print(self.seen)
@@ -186,7 +188,7 @@ else sample rate 0.01"""
         # calculate the median of all the traces at each sampling point
         return [self._median([trace[j][i] for j in trace]) for i in range(len(trace[k]))]
 
-    def plot_results(self):
+    def plot_results(self, yaml=False):
         """
         Plot the trace as faint lines.
         """
@@ -227,7 +229,7 @@ else sample rate 0.01"""
         #print([k for k in  self.trace_BtoA], self.trace_BtoA)
 
         # set up the figure
-        figsize=(20, 15)
+        figsize=(20, 25)
         fig=plt.figure(figsize=figsize)
         gs=fig.add_gridspec(3, 2, width_ratios=[3, 1])
         ax0=fig.add_subplot(gs[0, :]) # add subplot for gene interaction traces spanning the top half
@@ -248,8 +250,9 @@ else sample rate 0.01"""
         box_alpha=0.5
         ec='gray'
         bbox=dict(facecolor=fc, alpha=box_alpha, boxstyle='round, pad=0.5', edgecolor=ec)
-        plot_title_size=20
-        subplot_title_size=15
+        plot_title_size=50
+        subplot_title_size=30
+        text_size=20
 
         # set plot titles
         plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=self.genesA, Bsize=self.genesB, cycles=self.cycle)
@@ -263,10 +266,11 @@ else sample rate 0.01"""
                      self.trace[k], color='black', lw = setlw, alpha=all_alpha)
             ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
                      self.trace[k][:cycle_limit+1], color='black', lw = setlw, alpha=all_alpha)
+        median_of_trace=self._median_of_trace(self.trace)
         ax0.plot([x*self.sample_rate for x in range(len(self.trace[k]))],
-                 self._median_of_trace(self.trace), color='black', lw = setlw*10, alpha=0.75)
+                 median_of_trace, color='black', lw = setlw*10, alpha=0.75)
         ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
-                 self._median_of_trace(self.trace)[:cycle_limit+1], color='black', lw = setlw*10, alpha=0.75)
+                 median_of_trace[:cycle_limit+1], color='black', lw = setlw*10, alpha=0.75)
  
         # now plot the A-to-B and B-to-A traces
         for k in self.trace_AtoB:
@@ -279,7 +283,6 @@ else sample rate 0.01"""
         ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
                  self._median_of_trace(self.trace_AtoB)[:cycle_limit+1], color='blue', lw = setlw*10, alpha=0.75)
 
-
         for k in self.trace_BtoA:
             ax0.plot([x*self.sample_rate for x in range(len(self.trace_BtoA[k]))],
                      self.trace_BtoA[k], color='red', lw = setlw, alpha=B_alpha)
@@ -289,34 +292,39 @@ else sample rate 0.01"""
                  self._median_of_trace(self.trace_BtoA), color='red', lw = setlw*10, alpha=0.75)
         ax3.plot([x*self.sample_rate for x in range(cycle_limit+1)],
                  self._median_of_trace(self.trace_BtoA)[:cycle_limit+1], color='red', lw = setlw*10, alpha=0.75)
+
+        t50_text=r"$\tau_{{50\%}}={t50}$" "\n" "$({perc:.2f}\%\ of\ cycles)$".format(t50=self.t50, perc=self.t50/self.cycle*100)
+        ax0.text(x=self.t50, y=max(median_of_trace)//10, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
+        ax0.axvline(x=self.t50, lw=setlw*5, color='black')
         
         #plot m values on the second subplot
         ax1.plot(cycles[:cycle_limit+1], m_values[:cycle_limit+1], lw=setlw*2, color='blue', label=r"$m$")
 
         # plot 95 percentile of m value normal distribution
-        crossed_text="first 95 percentile value:\n{cross} cycles".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.cycle*100)
+        crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of t50)".format(cross=crossed_lower_bound_at, perc=crossed_lower_bound_at/self.t50*100)
         burn_in_text="burn-in:\n{cycle} cycles\n({perc:.0f}% of cycles)".format(cycle=start_norm_at, perc=burn_in*100)
         norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=burn_in*100)
         ax1.axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
         ax1.axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
-        ax1.text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox)
-        ax1.text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox)
+        ax1.text(y=upper_bound, x=cycle_limit, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
+        ax1.text(y=lower_bound, x=cycle_limit, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
         ax1.fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
         ax1.axvline(x=crossed_lower_bound_at, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-        ax1.text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox)
+        ax1.text(x=crossed_lower_bound_at, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox, fontsize=text_size)
 
         # plot normal distribution next to m plot
         ax2.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
         
-        ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
-        ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
-        ax0.set_xlabel("inversion cycle")
-        ax0.set_ylabel("unique interactions")
-        ax1.set_xlabel("inversion cycle")
-        ax1.set_ylabel(r"$m$")
+        ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
+        ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
+        ax0.set_xlabel("inversion cycle", fontsize=text_size)
+        ax0.set_ylabel("unique interactions", fontsize=text_size)
+        ax1.set_xlabel("inversion cycle", fontsize=text_size)
+        ax1.set_ylabel(r"$m$", fontsize=text_size)
         fig.suptitle(plot_title, fontsize=plot_title_size)
-        ax0.set_title(subplot0_title)
-        ax1.set_title(subplot1_title)
+        ax0.set_title(subplot0_title, fontsize=subplot_title_size)
+        ax1.set_title(subplot1_title, fontsize=subplot_title_size)
+        #ax3.set_title(subplot3_title, fontsize=subplot_title_size)
 
         output_dir='diagrams/'
         output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
@@ -336,6 +344,9 @@ else sample rate 0.01"""
         plt.savefig(output_dir+'pdf/'+output_name+'.pdf')
         plt.savefig(output_dir+'png/'+output_name+'.png')
 
+        if not yaml:
+            return
+        
         # save the trace as a yaml file
         import yaml
         with open(output_dir+'yaml/'+output_name+'.yaml', "w") as f:
