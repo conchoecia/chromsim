@@ -7,7 +7,10 @@ after a fusion-with mixing event.
 
 import random
 import sys
+import time
+import os
 
+remote_path_base='/scratch/molevo/bluehmel/'
 
 class Chrom():
     def __init__(self, size, gene_quantityA, gene_quantityB):
@@ -20,6 +23,8 @@ class Chrom():
         # seen is a list of genes that have already interacted with each other, value is cycle
         self.seen = {}
         self.t50=-1
+        self.AB_convergence=-1
+        #self.B_convergence=-1
 
         """if |A| + |B| <= 50, sample rate 1.0
 elif |A| + |B| <= 100, sample rate 0.5
@@ -37,11 +42,14 @@ else sample rate 0.01"""
         self.cycle = 0
         self.update_seen()
         self.calculate_m()
+        self.first_95_m=-1
+        self.m_sigma=-1
+        self.m_mu=-1
 
         # the following is just for logging/debugging purposes
         self.last_i0=0
         self.last_i1=self.genesA+self.genesB
-        self.log=[str(self)]
+        #self.log=[str(self)]
 
     def __str__(self):
         format_string="cycle: {cycle:10d}; last inversion: {start} {istart:5d} {inverted} {iend:<5d} {end}; m: {m:1.3f}"
@@ -62,20 +70,31 @@ else sample rate 0.01"""
         # until_converged hasn't been implemented yet, so tell the user that this isn't possible now
         if until_converged:
             converging_at=self.calculate_convergence()
+            AB_have_converged=False
+            #B_has_converged=False
             while len(self.seen) < converging_at: 
                 self.shuffle()
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
                     self.t50=self.cycle
-                #if len(self.seen) == self.size*(self.size-1)-1:
-                #    converged=True
-                #    print(self.seen)
-                
-                #converged=True
-                #for k in self.trace:
-                #    print(self.trace[k])
-                #    if len(self.trace[k]) < len(self.gene_list):
-                #        converged=False
-            #raise NotImplementedError("This function is not yet implemented.")
+                    print("reached t50 at "+str(self.t50))
+                if self.t50 >= 0:
+                    if self.AB_convergence < 0:
+                        AB_have_converged=True
+                        for k in self.trace_AtoB:
+                            if self.trace_AtoB[k][-1] < self.genesB-(1 if self.gene_list.index(k) == 0 else 0):
+                                AB_have_converged=False
+                    #if self.B_convergence < 0:
+                    #    B_has_converged=True
+                    #    for k in self.trace_BtoA:
+                    #        if self.trace_BtoA[k][-1] < self.genesA-(1 if self.gene_list.index(k) == self.size-1 else 0):
+                    #            B_has_converged=False
+                    if AB_have_converged and self.AB_convergence < 0:
+                        self.AB_convergence=self.cycle
+                        print("A-B/B-A converged at "+str(self.AB_convergence))
+                    #if B_has_converged and self.B_convergence < 0:
+                    #    self.B_convergence=self.cycle
+                    #    print("B converged at "+str(self.B_convergence))
+            print("converged at "+str(self.cycle))
         else:
             # run the simulation for the specified number of iterations
             for i in range(iterations):
@@ -113,7 +132,7 @@ else sample rate 0.01"""
         #log the current state
         self.last_i0=i0
         self.last_i1=i1
-        self.log.append(str(self))
+        #self.log.append(str(self))
     
     def update_seen(self):
         """
@@ -208,6 +227,8 @@ else sample rate 0.01"""
         mu=np.mean(burnt_m_values)
         var=np.var(burnt_m_values)
         sigma=math.sqrt(var)
+        self.m_sigma=sigma
+        self.m_mu=mu
         pdf_space=np.linspace(0, max(burnt_m_values), 100)
         normpdf=stats.norm.pdf(pdf_space, mu, sigma)
         normpdf/=max(normpdf)
@@ -218,6 +239,7 @@ else sample rate 0.01"""
             if k[1] >= lower_bound:
                 crossed_lower_bound_at=k[0]
                 break
+        self.first_95_m=crossed_lower_bound_at
         cycle_limit=crossed_lower_bound_at*2+1
         sample_limit=cycle_limit//self.sample_rate+1
 
@@ -326,19 +348,17 @@ else sample rate 0.01"""
         ax1.set_title(subplot1_title, fontsize=subplot_title_size)
         #ax3.set_title(subplot3_title, fontsize=subplot_title_size)
 
-        output_dir='diagrams/'
-        output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
-
         # create the diagram directory if it does not exist yet
-        import os
+
+        output_dir=self.get_LiSC_path('diagrams/')
+        output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
+            
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         if not os.path.exists(output_dir+'/pdf'):
             os.makedirs(output_dir+'/pdf')
         if not os.path.exists(output_dir+'/png'):
             os.makedirs(output_dir+'/png')
-        if not os.path.exists(output_dir+'/yaml'):
-            os.makedirs(output_dir+'/yaml')
         
         # save this as a pdf and png
         plt.savefig(output_dir+'pdf/'+output_name+'.pdf')
@@ -349,9 +369,40 @@ else sample rate 0.01"""
         
         # save the trace as a yaml file
         import yaml
-        with open(output_dir+'yaml/'+output_name+'.yaml', "w") as f:
+        if not os.path.exists(output_dir+'/yaml'):
+            os.makedirs(output_dir+'/yaml')
+        with open(output_dir+'yaml/'+output_name+'.yaml', 'w') as f:
             yaml.dump(self.trace, f)
 
+    def log(self, elapsed='-1'):
+        output_dir=self.get_LiSC_path('log/')
+        log_file='log.csv'
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        newfile=not os.path.exists(output_dir+log_file)
+        mode='w' if newfile else 'a'
+        
+        header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t'
+        format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95:.3f};{sig:.3f};{mu:.3f};{dt}\n'
+
+        from datetime import datetime as dt
+        
+        with open(output_dir+log_file, mode) as f:
+            if newfile:
+                f.write(header)
+            f.write(format_string.format(ts=str(dt.now()), A=self.genesA, B=self.genesB, c= self.cycle, t50=self.t50, ABconv=self.AB_convergence, m95=self.first_95_m, sig=self.m_sigma, mu=self.m_mu, dt=elapsed))
+
+    """
+    get the proper path if the program is running on LiSC
+    """
+    def get_LiSC_path(self, output_dir):
+        return (remote_path_base if os.path.exists(remote_path_base) else '')+output_dir
+        if os.path.exists(remote_path_base):
+            return remote_path_base+output_dir
+        return output_dir
+        
 def print_usage():
     message="""
     usage: inversion_sim.py <Asize> <Bsize>
@@ -362,8 +413,6 @@ def print_usage():
     print(message)
             
 def main():
-    import time
-    import sys
     
     iterations = 100#000
     
@@ -385,14 +434,14 @@ def main():
     # start a timer
     start=time.time()
 
-    print("creating chromosome...")
+    print("\ncreating chromosome...")
     chrom=Chrom(Asize+Bsize, Asize, Bsize)
     #chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
-    print("running simulation...")
+    print("\nrunning simulation...")
     chrom.simulation_cycle(until_converged=True)
     #for chrom in chroms: # run all simulations
     #    chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
-    print("plotting results...")
+    print("\nplotting results...")
     chrom.plot_results()
     #for chrom in chroms: # plot all results
     #    print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
@@ -400,7 +449,9 @@ def main():
 
     end=time.time()
     elapsed=end-start
-    print("elapsed time: {minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60)))
-
+    elapsed_string="{minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60))
+    print("\nelapsed time: "+elapsed_string)
+    chrom.log(elapsed_string)
+    
 if __name__ == "__main__":
     main()
