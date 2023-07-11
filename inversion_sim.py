@@ -384,7 +384,7 @@ else sample rate 0.01"""
         newfile=not os.path.exists(output_dir+log_file)
         mode='w' if newfile else 'a'
         
-        header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t'
+        header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
         format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95:.3f};{sig:.3f};{mu:.3f};{dt}\n'
 
         from datetime import datetime as dt
