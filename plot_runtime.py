@@ -27,7 +27,7 @@ def main():
         data=[(int(line[pos_Asize])+int(line[pos_Bsize]), convert_dt(line[pos_dt])) for line in lines[1:]]
 
     plt.plot([x[0] for x in data], [x[1]/60 for x in data], 'o')
-    plt.xlabel("genome size (|A|+|B|)")
+    plt.xlabel("chromosome size (|A|+|B|)")
     plt.ylabel("runtime (minutes)")
     plt.savefig(use_dir+output_file)
 
