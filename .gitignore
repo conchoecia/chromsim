@@ -182,3 +182,5 @@ pyrightconfig.json
 *~
 diagrams/
 diagrams.old*/
+*.err
+*.out
