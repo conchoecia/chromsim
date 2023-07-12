@@ -5,8 +5,8 @@
 #SBATCH --mem=10000M
 #SBATCH --time=0-10:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
+#SBATCH --output=log/%x-%j.out
+#SBATCH --error=log/%x-%j.err
 #SBATCH --array=1-10
 
 config=./inversion_sim_array_args

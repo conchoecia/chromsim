@@ -72,7 +72,8 @@ else sample rate 0.01"""
             converging_at=self.calculate_convergence()
             AB_have_converged=False
             #B_has_converged=False
-            while len(self.seen) < converging_at: 
+            level_of_convergence=.99 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
+            while len(self.seen)/converging_at < level_of_convergence: 
                 self.shuffle()
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
                     self.t50=self.cycle
