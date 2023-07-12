@@ -8,8 +8,8 @@ def convert_dt(dt):
 def main():
     remote_path='/scratch/molevo/bluehmel/'
     use_dir=(remote_path if os.path.exists(remote_path) else '')+'log/'
-    input_file='log.csv'
-    output_file='runtime.png'
+    input_file='log_full_convergence.csv'
+    output_file='runtime_full_convergence.png'
 
     if not os.path.exists(use_dir+input_file):
         print(use_dir+input_file)

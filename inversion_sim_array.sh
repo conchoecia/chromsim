@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=inversion_sim_array
+#SBATCH --job-name=inversion_sim_improved_convergence_array
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=10000M
 #SBATCH --time=0-10:00:00

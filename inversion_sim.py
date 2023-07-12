@@ -25,6 +25,9 @@ class Chrom():
         self.t50=-1
         self.AB_convergence=-1
         #self.B_convergence=-1
+        self.converged=0
+        self.converged_AtoB=0
+        self.converged_BtoA=0
 
         """if |A| + |B| <= 50, sample rate 1.0
 elif |A| + |B| <= 100, sample rate 0.5
@@ -72,29 +75,32 @@ else sample rate 0.01"""
             converging_at=self.calculate_convergence()
             AB_have_converged=False
             #B_has_converged=False
-            level_of_convergence=.99 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
+            level_of_convergence=1 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
             while len(self.seen)/converging_at < level_of_convergence: 
                 self.shuffle()
+
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
                     self.t50=self.cycle
                     print("reached t50 at "+str(self.t50))
-                if self.t50 >= 0:
-                    if self.AB_convergence < 0:
-                        AB_have_converged=True
-                        for k in self.trace_AtoB:
-                            if self.trace_AtoB[k][-1] < self.genesB-(1 if self.gene_list.index(k) == 0 else 0):
-                                AB_have_converged=False
-                    #if self.B_convergence < 0:
-                    #    B_has_converged=True
-                    #    for k in self.trace_BtoA:
-                    #        if self.trace_BtoA[k][-1] < self.genesA-(1 if self.gene_list.index(k) == self.size-1 else 0):
-                    #            B_has_converged=False
-                    if AB_have_converged and self.AB_convergence < 0:
+                if self.t50 >= 0 and not AB_have_converged:
+                    AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
+                #if self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB:
+                    #if self.AB_convergence < 0:
+                    #    AB_have_converged=True
+                    #    for k in self.trace_AtoB:
+                    #        if self.trace_AtoB[k][-1] < self.genesB-(1 if self.gene_list.index(k) == 0 else 0):
+                    #            AB_have_converged=False
+                    ##if self.B_convergence < 0:
+                    ##    B_has_converged=True
+                    ##    for k in self.trace_BtoA:
+                    ##        if self.trace_BtoA[k][-1] < self.genesA-(1 if self.gene_list.index(k) == self.size-1 else 0):
+                    ##            B_has_converged=False
+                    if AB_have_converged:
                         self.AB_convergence=self.cycle
                         print("A-B/B-A converged at "+str(self.AB_convergence))
-                    #if B_has_converged and self.B_convergence < 0:
-                    #    self.B_convergence=self.cycle
-                    #    print("B converged at "+str(self.B_convergence))
+                    ##if B_has_converged and self.B_convergence < 0:
+                    ##    self.B_convergence=self.cycle
+                    ##    print("B converged at "+str(self.B_convergence))
             print("converged at "+str(self.cycle))
         else:
             # run the simulation for the specified number of iterations
@@ -153,6 +159,7 @@ else sample rate 0.01"""
                     self.trace_AtoB[k].append(self.trace_AtoB[k][-1])
                 if k in self.trace_BtoA:
                     self.trace_BtoA[k].append(self.trace_BtoA[k][-1])
+        #print([self.trace_BtoA[k][-1] for k in self.trace_BtoA.keys()])
         # go through all of the pairs in the list to update self.seen
         for i in range(len(self.gene_list)-1):
             this_edge = tuple(sorted([self.gene_list[i],
@@ -165,14 +172,25 @@ else sample rate 0.01"""
                 # add the edge to the seen graph
                 self.seen[this_edge] = self.cycle
                 # update the trace structure
+                #print(self.converged_AtoB)
                 for j in [0,1]:
                     other = 1 if j == 0 else 0
                     self.trace[this_edge[j]][-1] += 1
+                    #if self.trace[this_edge[j]][-1] == self.size-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                    #    self.converged+=1
+                    #    print('gene converged ('+this_edge[j]+')')
                     if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
                         self.trace_AtoB[this_edge[j]][-1] += 1
+                        #print((self.trace_AtoB[this_edge[j]][-1], self.genesB-1, this_edge[j].split('.')[1]))
+                        if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                            self.converged_AtoB+=1
+                            #print('A gene converged ('+this_edge[j]+')')
                     if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
                         self.trace_BtoA[this_edge[j]][-1] += 1
-
+                        if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
+                            self.converged_BtoA+=1
+                            #print('B gene converged ('+this_edge[j]+')')
+                
     def get_AB_string(self):
         return ''.join([gene[0] for gene in self.gene_list])
 
@@ -377,7 +395,7 @@ else sample rate 0.01"""
 
     def log(self, elapsed='-1'):
         output_dir=self.get_LiSC_path('log/')
-        log_file='log.csv'
+        log_file='log_full_convergence.csv'
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
