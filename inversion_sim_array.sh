@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=inversion_sim_improved_convergence_array
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=10000M
-#SBATCH --time=0-10:00:00
+#SBATCH --mem=5000M
+#SBATCH --time=0-02:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --output=log/%x-%j.out
 #SBATCH --error=log/%x-%j.err
