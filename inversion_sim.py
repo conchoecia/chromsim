@@ -75,7 +75,7 @@ else sample rate 0.01"""
             converging_at=self.calculate_convergence()
             AB_have_converged=False
             #B_has_converged=False
-            level_of_convergence=1 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
+            level_of_convergence=.99 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
             while len(self.seen)/converging_at < level_of_convergence: 
                 self.shuffle()
 
@@ -395,7 +395,7 @@ else sample rate 0.01"""
 
     def log(self, elapsed='-1'):
         output_dir=self.get_LiSC_path('log/')
-        log_file='log_full_convergence.csv'
+        log_file='log_improved_convergence_99.csv'
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
