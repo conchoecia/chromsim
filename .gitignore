@@ -175,12 +175,19 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-# other
-*.pdf
-*.yaml
-*.png
-*~
+# generated diagrams
 diagrams/
-diagrams.old*/
+diagrams.old/
+
+# emacs tilde files
+*~
+
+# log directory
+log/
+# slurm log files
 *.err
 *.out
+
+# poetry stuff
+poetry.lock
+pyproject.toml
