@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=inversion_sim
-#SBATCH --cpus-per-task=2
+#SBATCH --job-name=inversion_sim_improved_convergence
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=5000M
 #SBATCH --time=0-02:00:00
 #SBATCH --mail-type=ALL

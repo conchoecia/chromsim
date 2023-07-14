@@ -13,8 +13,8 @@ import os
 remote_path_base='/scratch/molevo/bluehmel/'
 
 class Chrom():
-    def __init__(self, size, gene_quantityA, gene_quantityB):
-        self.length = size # is this even relevant when gene_quantityA and gene_quantityB are specified?
+    def __init__(self, length, gene_quantityA, gene_quantityB):
+        self.length = length
         self.genesA = gene_quantityA
         self.genesB = gene_quantityB
         self.size=self.genesA+self.genesB
@@ -24,12 +24,13 @@ class Chrom():
         self.seen = {}
         self.t50=-1
         self.AB_convergence=-1
-        #self.B_convergence=-1
+        self.converged_AtoB=0
+        self.converged_BtoA=0
 
         """if |A| + |B| <= 50, sample rate 1.0
-elif |A| + |B| <= 100, sample rate 0.5
-elif |A| + |B| <= 500, sample rate 0.1
-else sample rate 0.01"""
+        elif |A| + |B| <= 100, sample rate 0.5
+        elif |A| + |B| <= 500, sample rate 0.1
+        else sample rate 0.01"""
         # this is the percent of the data that we sample, range [0-1]. 0.01 is a good rate for samples above 100k iterations
         self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
         self.sample_rate = int( 1 / self.sample_frequency)
@@ -45,12 +46,7 @@ else sample rate 0.01"""
         self.first_95_m=-1
         self.m_sigma=-1
         self.m_mu=-1
-
-        # the following is just for logging/debugging purposes
-        self.last_i0=0
-        self.last_i1=self.genesA+self.genesB
-        #self.log=[str(self)]
-
+    
     def __str__(self):
         format_string="cycle: {cycle:10d}; last inversion: {start} {istart:5d} {inverted} {iend:<5d} {end}; m: {m:1.3f}"
         AB_string=self.get_AB_string()
@@ -71,30 +67,18 @@ else sample rate 0.01"""
         if until_converged:
             converging_at=self.calculate_convergence()
             AB_have_converged=False
-            #B_has_converged=False
-            level_of_convergence=.99 # the percentage of possible interactions to be waiting for before stopping to limit runtime to a feasible range
+            level_of_convergence=1 # the percentage of possible interactions to wait for (0-1)
             while len(self.seen)/converging_at < level_of_convergence: 
                 self.shuffle()
+
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
                     self.t50=self.cycle
                     print("reached t50 at "+str(self.t50))
-                if self.t50 >= 0:
-                    if self.AB_convergence < 0:
-                        AB_have_converged=True
-                        for k in self.trace_AtoB:
-                            if self.trace_AtoB[k][-1] < self.genesB-(1 if self.gene_list.index(k) == 0 else 0):
-                                AB_have_converged=False
-                    #if self.B_convergence < 0:
-                    #    B_has_converged=True
-                    #    for k in self.trace_BtoA:
-                    #        if self.trace_BtoA[k][-1] < self.genesA-(1 if self.gene_list.index(k) == self.size-1 else 0):
-                    #            B_has_converged=False
-                    if AB_have_converged and self.AB_convergence < 0:
+                if self.t50 >= 0 and not AB_have_converged:
+                    AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
+                    if AB_have_converged:
                         self.AB_convergence=self.cycle
                         print("A-B/B-A converged at "+str(self.AB_convergence))
-                    #if B_has_converged and self.B_convergence < 0:
-                    #    self.B_convergence=self.cycle
-                    #    print("B converged at "+str(self.B_convergence))
             print("converged at "+str(self.cycle))
         else:
             # run the simulation for the specified number of iterations
@@ -130,11 +114,6 @@ else sample rate 0.01"""
         self.cycle += 1
         self.calculate_m()
 
-        #log the current state
-        self.last_i0=i0
-        self.last_i1=i1
-        #self.log.append(str(self))
-    
     def update_seen(self):
         """
         update the seen graph
@@ -158,11 +137,6 @@ else sample rate 0.01"""
             this_edge = tuple(sorted([self.gene_list[i],
                                       self.gene_list[i+1]]))
             if this_edge not in self.seen:
-                #if "B.1" in this_edge:
-                #    print(this_edge)
-                #if "A.1" in this_edge:
-                #    print(this_edge)
-                # add the edge to the seen graph
                 self.seen[this_edge] = self.cycle
                 # update the trace structure
                 for j in [0,1]:
@@ -170,9 +144,13 @@ else sample rate 0.01"""
                     self.trace[this_edge[j]][-1] += 1
                     if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
                         self.trace_AtoB[this_edge[j]][-1] += 1
+                        if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                            self.converged_AtoB+=1
                     if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
                         self.trace_BtoA[this_edge[j]][-1] += 1
-
+                        if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
+                            self.converged_BtoA+=1
+                
     def get_AB_string(self):
         return ''.join([gene[0] for gene in self.gene_list])
 
@@ -246,10 +224,6 @@ else sample rate 0.01"""
 
         # initialize the matplotlib plot
         import matplotlib.pyplot as plt
-
-        #print([k for k in  self.trace_AtoB])
-        #print("A.1: ", self.trace_AtoB["A.1"])
-        #print([k for k in  self.trace_BtoA], self.trace_BtoA)
 
         # set up the figure
         figsize=(20, 25)
@@ -377,7 +351,7 @@ else sample rate 0.01"""
 
     def log(self, elapsed='-1'):
         output_dir=self.get_LiSC_path('log/')
-        log_file='log.csv'
+        log_file='log_improved_convergence_99.csv' #TODO: make this name be set automatically depending on the paramters
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -395,6 +369,7 @@ else sample rate 0.01"""
                 f.write(header)
             f.write(format_string.format(ts=str(dt.now()), A=self.genesA, B=self.genesB, c= self.cycle, t50=self.t50, ABconv=self.AB_convergence, m95=self.first_95_m, sig=self.m_sigma, mu=self.m_mu, dt=elapsed))
 
+    # TODO: outsource this to something like "utils.py"
     """
     get the proper path if the program is running on LiSC
     """
@@ -403,7 +378,8 @@ else sample rate 0.01"""
         if os.path.exists(remote_path_base):
             return remote_path_base+output_dir
         return output_dir
-        
+
+# TODO: add convergence target to input
 def print_usage():
     message="""
     usage: inversion_sim.py <Asize> <Bsize>
@@ -415,17 +391,17 @@ def print_usage():
             
 def main():
     
-    iterations = 100#000
-    
-    size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
+    #iterations = 100000
+    #size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
 
     # handle command line arguments
     if len(sys.argv) != 3:
         print_usage()
         return
-
+    
     Asize=-1
     Bsize=-1
+
     try:
         Asize=int(sys.argv[1])
         Bsize=int(sys.argv[2])
@@ -437,16 +413,10 @@ def main():
 
     print("\ncreating chromosome...")
     chrom=Chrom(Asize+Bsize, Asize, Bsize)
-    #chroms=[Chrom(10000000, pair[0], pair[1]) for pair in size_pairs] # create chromosomes
     print("\nrunning simulation...")
     chrom.simulation_cycle(until_converged=True)
-    #for chrom in chroms: # run all simulations
-    #    chrom.simulation_cycle(iterations=iterations//max([pair[0]+pair[1] for pair in size_pairs]*(chrom.genesA+chrom.genesB))*(chrom.genesA+chrom.genesB))
     print("\nplotting results...")
     chrom.plot_results()
-    #for chrom in chroms: # plot all results
-    #    print("plotting |A|={A:4d}, |B|={B:4d}".format(A=chrom.genesA, B=chrom.genesB))
-    #    chrom.plot_results()
 
     end=time.time()
     elapsed=end-start
