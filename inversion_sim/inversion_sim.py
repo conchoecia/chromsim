@@ -9,8 +9,7 @@ import random
 import sys
 import time
 import os
-
-remote_path_base='/scratch/molevo/bluehmel/'
+import numpy as np
 
 class Chrom():
     def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1):
@@ -197,7 +196,7 @@ class Chrom():
         # calculate the median of all the traces at each sampling point
         return [self._median([trace[j][i] for j in trace]) for i in range(len(trace[k]))]
 
-    def plot_results(self, yaml=False):
+    def plot_results(self, output_dir, yaml=False):
         """
         Plot the trace as faint lines.
         """
@@ -207,8 +206,7 @@ class Chrom():
         # calculate all the values
         from scipy import stats
         import math
-        import numpy as np
-
+        
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
         burn_in=0.25
@@ -336,38 +334,38 @@ class Chrom():
 
         # create the diagram directory if it does not exist yet
 
-        output_dir=self.get_LiSC_path('diagrams/')
+        diagram_dir=output_dir+'diagrams/'
         output_name='inversion_sim_a{a}_b{b}'.format(a=self.genesA, b=self.genesB)
             
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        if not os.path.exists(output_dir+'/pdf'):
-            os.makedirs(output_dir+'/pdf')
-        if not os.path.exists(output_dir+'/png'):
-            os.makedirs(output_dir+'/png')
+        if not os.path.exists(diagram_dir):
+            os.makedirs(diagram_dir)
+        if not os.path.exists(diagram_dir+'/pdf'):
+            os.makedirs(diagram_dir+'/pdf')
+        if not os.path.exists(diagram_dir+'/png'):
+            os.makedirs(diagram_dir+'/png')
         
         # save this as a pdf and png
-        plt.savefig(output_dir+'pdf/'+output_name+'.pdf')
-        plt.savefig(output_dir+'png/'+output_name+'.png')
+        plt.savefig(diagram_dir+'pdf/'+output_name+'.pdf')
+        plt.savefig(diagram_dir+'png/'+output_name+'.png')
 
         if not yaml:
             return
         
         # save the trace as a yaml file
         import yaml
-        if not os.path.exists(output_dir+'/yaml'):
-            os.makedirs(output_dir+'/yaml')
-        with open(output_dir+'yaml/'+output_name+'.yaml', 'w') as f:
+        if not os.path.exists(diagram_dir+'/yaml'):
+            os.makedirs(diagram_dir+'/yaml')
+        with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
             yaml.dump(self.trace, f)
 
-    def log(self, elapsed='-1'):
-        output_dir=self.get_LiSC_path('log/')
-        log_file='log_improved_convergence_99.csv' #TODO: make this name be set automatically depending on the paramters
+    def log(self, output_dir, elapsed='-1'):
+        log_dir=output_dir+'log/'
+        log_file='log_improved_convergence_99.csv' #TODO: make this name be set automatically depending on the parameters
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
-        newfile=not os.path.exists(output_dir+log_file)
+        newfile=not os.path.exists(log_dir+log_file)
         mode='w' if newfile else 'a'
         
         header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
@@ -375,30 +373,38 @@ class Chrom():
 
         from datetime import datetime as dt
         
-        with open(output_dir+log_file, mode) as f:
+        with open(log_dir+log_file, mode) as f:
             if newfile:
                 f.write(header)
             f.write(format_string.format(ts=str(dt.now()), A=self.genesA, B=self.genesB, c= self.cycle, t50=self.t50, ABconv=self.AB_convergence, m95=self.first_95_m, sig=self.m_sigma, mu=self.m_mu, dt=elapsed))
 
-    # TODO: outsource this to something like "utils.py"
-    def get_LiSC_path(self, output_dir):
-        """
-        get the proper path if the program is running on LiSC
-        """
-        return (remote_path_base if os.path.exists(remote_path_base) else '')+output_dir
-        if os.path.exists(remote_path_base):
-            return remote_path_base+output_dir
-        return output_dir
+import collections.abc as abc
 
-# TODO: add convergence target to input
-def print_usage():
-    message="""
-    usage: inversion_sim.py <Asize> <Bsize>
+class FloatRange(abc.Container):
 
-    - Asize: number of genes in group A (int)
-    - Bsize: number of genes in group B (int) 
-    """
-    print(message)
+    def __init__(self, lower, upper, step=0.01):
+        """
+        creates an instance for numbers between lower and upper
+        """
+        self.lower=lower
+        self.upper=upper
+        # step is for the iterator
+        self.step=step
+
+    def __contains__(self, x):
+        return self.lower <= x and self.upper >= x
+
+    # for some reason this is needed to have a help message with argparse
+    def __iter__(self):
+        self.n=0
+        return self
+
+    
+    def __next__(self):
+        if self.n>=1:
+            raise StopIteration
+        self.n+=self.step
+        return self.n-self.step
             
 def main():
     
@@ -406,34 +412,39 @@ def main():
     #size_pairs=[(5, 5), (5, 10), (10, 100), (500, 400), (1000, 1000), (500, 1000)] # pairs of A and B sizes to simulate
 
     # handle command line arguments
-    if len(sys.argv) != 3:
-        print_usage()
-        return
+    import argparse as ap
+
+    parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
+    parser.add_argument('Asize', type=int, help="integer value for the number of genes in group A")
+    parser.add_argument('Bsize', type=int, help="integer value for the number of genes in group B")
+    parser.add_argument('-o', '--output-dir', default='./', help="directory in which to store the output of the program (default: './')")
+    parser.add_argument('-c', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)")
+    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
+
+    namespace=parser.parse_args()
+    args=vars(namespace)
+
+    outdir=args['output_dir']
+    if not os.path.exists(outdir):
+        raise parser.error("The directory {} does not exist.".format(outdir))
+    if not outdir[-1] == '/':
+        outdir+='/'
     
-    Asize=-1
-    Bsize=-1
-
-    try:
-        Asize=int(sys.argv[1])
-        Bsize=int(sys.argv[2])
-    except ValueError:
-        print_usage()
-
     # start a timer
     start=time.time()
 
     print("\ncreating chromosome...")
-    chrom=Chrom(Asize+Bsize, Asize, Bsize)
+    chrom=Chrom(0, args['Asize'], args['Bsize'], level_of_convergence=args['level_of_convergence'])
     print("\nrunning simulation...")
-    chrom.simulation_cycle(until_converged=True)
+    chrom.simulation_cycle(until_converged=args['converge'])
     print("\nplotting results...")
-    chrom.plot_results()
+    chrom.plot_results(outdir)
 
     end=time.time()
     elapsed=end-start
     elapsed_string="{minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60))
     print("\nelapsed time: "+elapsed_string)
-    chrom.log(elapsed_string)
+    chrom.log(outdir, elapsed=elapsed_string)
     
 if __name__ == "__main__":
     main()
