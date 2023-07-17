@@ -13,7 +13,10 @@ import os
 remote_path_base='/scratch/molevo/bluehmel/'
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB):
+    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1):
+        # length is the chromosome length
+        # The intention is to eventually model varying regions of gene density,
+        #    so don't delete this yet.
         self.length = length
         self.genesA = gene_quantityA
         self.genesB = gene_quantityB
@@ -26,6 +29,10 @@ class Chrom():
         self.AB_convergence=-1
         self.converged_AtoB=0
         self.converged_BtoA=0
+        # level_of_convergence specififies the fraction of possible gene interactions have
+        #   to have been seen before ending the simulation if until_converged is set to True.
+        # The value ranges from 0 to 1.
+        self.level_of_convergence=level_of_convergence
 
         """if |A| + |B| <= 50, sample rate 1.0
         elif |A| + |B| <= 100, sample rate 0.5
@@ -35,7 +42,7 @@ class Chrom():
         self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
         self.sample_rate = int( 1 / self.sample_frequency)
 
-        # this tracks how many new interactions were added at each cycle
+        # this cumulatively tracks how many new interactions were added at each cycle
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
@@ -67,8 +74,7 @@ class Chrom():
         if until_converged:
             converging_at=self.calculate_convergence()
             AB_have_converged=False
-            level_of_convergence=1 # the percentage of possible interactions to wait for (0-1)
-            while len(self.seen)/converging_at < level_of_convergence: 
+            while len(self.seen)/converging_at < self.level_of_convergence: 
                 self.shuffle()
 
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
@@ -92,10 +98,10 @@ class Chrom():
                 self.shuffle()
             print("{cycle:15d}  100.00%".format(cycle=i+1))
 
-    """
-    calculates the number of possible unique gene interactions
-    """
     def calculate_convergence(self):
+        """
+        calculates the number of possible unique gene interactions
+        """
         conv=0
         for i in range(self.genesA+self.genesB):
             conv+=i
@@ -144,20 +150,25 @@ class Chrom():
                     self.trace[this_edge[j]][-1] += 1
                     if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
                         self.trace_AtoB[this_edge[j]][-1] += 1
+                        # check whether the latest count of cross-group gene interactions for this gene is equal
+                        #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
+                        # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
+                        #   cannot interact with the other telomere)
                         if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
                             self.converged_AtoB+=1
                     if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
                         self.trace_BtoA[this_edge[j]][-1] += 1
+                        # same as above, but for B-to-A
                         if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
                             self.converged_BtoA+=1
                 
     def get_AB_string(self):
         return ''.join([gene[0] for gene in self.gene_list])
 
-    """
-    calculate m of the current gene sequence
-    """
     def calculate_m(self):
+        """
+        calculate m of the current gene sequence
+        """
         sequence=self.get_AB_string()
         substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
         A = sequence.count('A')
@@ -370,10 +381,10 @@ class Chrom():
             f.write(format_string.format(ts=str(dt.now()), A=self.genesA, B=self.genesB, c= self.cycle, t50=self.t50, ABconv=self.AB_convergence, m95=self.first_95_m, sig=self.m_sigma, mu=self.m_mu, dt=elapsed))
 
     # TODO: outsource this to something like "utils.py"
-    """
-    get the proper path if the program is running on LiSC
-    """
     def get_LiSC_path(self, output_dir):
+        """
+        get the proper path if the program is running on LiSC
+        """
         return (remote_path_base if os.path.exists(remote_path_base) else '')+output_dir
         if os.path.exists(remote_path_base):
             return remote_path_base+output_dir
