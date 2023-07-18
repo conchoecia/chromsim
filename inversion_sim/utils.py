@@ -30,10 +30,17 @@ class FloatRange(abc.Container):
         return self.n-self.step
 
 def convert_dt(dt):
+    """
+    converts a sting of the form 'mm:ss' to seconds
+    """
     mins, secs=dt.split(':')
     return 60*int(mins)+int(secs)
 
 def plot_runtime(path, filename):
+    """
+    plot the runtime as a function of chromosome size from a log file
+    probably obsolete now, will keep just in case
+    """
     input_file=filename+'.csv'
     output_file=filename+'.png'
 
@@ -57,8 +64,11 @@ def plot_runtime(path, filename):
     plt.ylabel("runtime (minutes)")
     plt.savefig(path+output_file)
 
-
 def set_up_fig(chrom):
+    """
+    create the basic structure of the matplotlib figure
+    returns the figure itself and the axes that are part of it
+    """
     import matplotlib.pyplot as plt
 
     figsize=(20, 25)
@@ -73,6 +83,8 @@ def set_up_fig(chrom):
     
     # figure styling
     plt.style.use('bmh')
+
+    # set the colors, font sizes, etc. as global variables
     global setlw
     setlw = 0.2
     global seta
@@ -97,7 +109,8 @@ def set_up_fig(chrom):
     B_alpha   = max(1/chrom.genesB, 0.05)
     global all_alpha
     all_alpha = max(1/(chrom.genesA + chrom.genesB), 0.05)
-    # set plot titles
+    
+    # set plot titles and axis labels
     plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
     subplot0_title=r"number of unique interactions after $n$ inversion cycles"
     subplot1_title=r"$m$ after $n$ inversion cycles"
@@ -115,7 +128,9 @@ def set_up_fig(chrom):
     return fig, ax0, ax1, ax2, ax3
     
 def plot_trace(chrom, trace, ax, lim, color, alpha):
-    # now plot the A-to-B and B-to-A traces
+    """
+    plot trace on ax from 0 to lim
+    """
     for k in trace:
         ax.plot([x*chrom.sample_rate for x in range(lim)],
                  trace[k][:lim], color=color, lw = setlw, alpha=alpha)
@@ -123,12 +138,17 @@ def plot_trace(chrom, trace, ax, lim, color, alpha):
             chrom._median_of_trace(trace)[:lim], color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
+    """
+    plot a horizontal line at x=t50 on ax
+    """
     t50_text=r"$\tau_{{50\%}}={t50}$" "\n" "$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100)
     ax.text(x=chrom.t50, y=max(chrom._median_of_trace(chrom.trace))//10, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
     ax.axvline(x=chrom.t50, lw=setlw*5, color='black')
 
 def plot_m(chrom, ax_m, ax_norm):
-    #plot m values on the second subplot
+    """
+    plot the m value curve and the normal distribution (on a separate plot ax_norm)
+    """
     cycles=[x for x in chrom.trace_m.keys()]
     m_values=[y for y in chrom.trace_m.values()]
     pdf_space=np.linspace(0, max(m_values), 100)
@@ -154,6 +174,10 @@ def plot_m(chrom, ax_m, ax_norm):
     ax_norm.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
 
 def save_fig(output_dir, output_name, yaml=False):
+    """
+    save the figure to a specified output location as .png and .pdf
+    if yaml is True, a yaml file is dumped as well
+    """
     # create the diagram directory if it does not exist yet
     diagram_dir=output_dir+'diagrams/'
     
@@ -179,7 +203,7 @@ def save_fig(output_dir, output_name, yaml=False):
 
 def plot_results(chrom, output_dir, yaml=False):
     """
-    Plot the trace as faint lines.
+    plot the results of a simulated chromosome
     """
     # Use matplotlib to plot each key's list as a line.
     # The index of the list is the x-axis, the value is the y-axis.
@@ -208,10 +232,12 @@ def plot_results(chrom, output_dir, yaml=False):
     output_name='inversion_sim_a{a}_b{b}'.format(a=chrom.genesA, b=chrom.genesB)
     save_fig(output_dir, output_name, yaml)
 
-def log(selfchrom, output_dir, elapsed='-1'):
+def log(chrom, output_dir, log_file, elapsed='-1'):
+    """
+    log the state of a chromosome
+    """
     log_dir=output_dir+'log/'
-    log_file='log_improved_convergence_99.csv' #TODO: make this name be set automatically depending on the parameters
-    
+
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -229,6 +255,9 @@ def log(selfchrom, output_dir, elapsed='-1'):
         f.write(format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed))
 
 def create_parser():
+    """
+    creates an argparse parser for the CLI arguments
+    """
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
     parser.add_argument('Asize', type=int, help="integer value for the number of genes in group A")
     parser.add_argument('Bsize', type=int, help="integer value for the number of genes in group B")
