@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 This program calculates the time it takes for any gene to interact with another
 after a fusion-with mixing event.
@@ -9,7 +7,7 @@ import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1):
+    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1):
         # length is the chromosome length
         # The intention is to eventually model varying regions of gene density,
         #    so don't delete this yet.
@@ -21,6 +19,7 @@ class Chrom():
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
         # seen is a list of genes that have already interacted with each other, value is cycle
         self.seen = {}
+        self.window_size=window_size
         self.t50=-1
         self.AB_convergence=-1
         self.converged_AtoB=0
@@ -154,27 +153,29 @@ class Chrom():
                     self.trace_BtoA[k].append(self.trace_BtoA[k][-1])
         # go through all of the pairs in the list to update self.seen
         for i in range(len(self.gene_list)-1):
-            this_edge = tuple(sorted([self.gene_list[i],
-                                      self.gene_list[i+1]]))
-            if this_edge not in self.seen:
-                self.seen[this_edge] = self.cycle
-                # update the trace structure
-                for j in [0,1]:
-                    other = 1 if j == 0 else 0
-                    self.trace[this_edge[j]][-1] += 1
-                    if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
-                        self.trace_AtoB[this_edge[j]][-1] += 1
-                        # check whether the latest count of cross-group gene interactions for this gene is equal
-                        #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
-                        # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
-                        #   cannot interact with the other telomere)
-                        if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
-                            self.converged_AtoB+=1
-                    if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
-                        self.trace_BtoA[this_edge[j]][-1] += 1
-                        # same as above, but for B-to-A
-                        if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
-                            self.converged_BtoA+=1
+            #print(range(i+1, min(len(self.gene_list)-1, i+self.window_size+1)))
+            for l in range(i+1, min(len(self.gene_list), i+self.window_size+1)):
+                #print("in loop")
+                this_edge = tuple(sorted([self.gene_list[i], self.gene_list[l]]))
+                if this_edge not in self.seen:
+                    self.seen[this_edge] = self.cycle
+                    # update the trace structure
+                    for j in [0,1]:
+                        other = 1 if j == 0 else 0
+                        self.trace[this_edge[j]][-1] += 1
+                        if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
+                            self.trace_AtoB[this_edge[j]][-1] += 1
+                            # check whether the latest count of cross-group gene interactions for this gene is equal
+                            #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
+                            # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
+                            #   cannot interact with the other telomere)
+                            if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                                self.converged_AtoB+=1
+                        if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
+                            self.trace_BtoA[this_edge[j]][-1] += 1
+                            # same as above, but for B-to-A
+                            if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
+                                self.converged_BtoA+=1
                 
     def get_AB_string(self):
         return ''.join([gene[0] for gene in self.gene_list])

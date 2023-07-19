@@ -201,7 +201,7 @@ def save_fig(output_dir, output_name, yaml=False):
         with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
             yaml.dump(chrom.trace, f)
 
-def plot_results(chrom, output_dir, yaml=False):
+def plot_results(chrom, output_dir, output_name, yaml=False):
     """
     plot the results of a simulated chromosome
     """
@@ -229,14 +229,14 @@ def plot_results(chrom, output_dir, yaml=False):
     ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
     ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
 
-    output_name='inversion_sim_a{a}_b{b}'.format(a=chrom.genesA, b=chrom.genesB)
     save_fig(output_dir, output_name, yaml)
 
-def log(chrom, output_dir, log_file, elapsed='-1'):
+def log(chrom, output_dir, output_name, elapsed='-1'):
     """
     log the state of a chromosome
     """
     log_dir=output_dir+'log/'
+    log_file=output_name+'.csv'
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -262,7 +262,8 @@ def create_parser():
     parser.add_argument('Asize', type=int, help="integer value for the number of genes in group A")
     parser.add_argument('Bsize', type=int, help="integer value for the number of genes in group B")
     parser.add_argument('-o', '--output-dir', default='./', help="directory in which to store the output of the program (default: './')")
-    parser.add_argument('-c', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)")
+    parser.add_argument('-c', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
-
+    parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
+    #parser.add_argument('-a', '--average_t5', 
     return parser
