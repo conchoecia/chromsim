@@ -21,7 +21,6 @@ class FloatRange(abc.Container):
     def __iter__(self):
         self.n=0
         return self
-
     
     def __next__(self):
         if self.n>=1:
@@ -36,13 +35,12 @@ def convert_dt(dt):
     mins, secs=dt.split(':')
     return 60*int(mins)+int(secs)
 
-def plot_runtime(path, filename):
+def read_log_file(path, filename, cols=[]):
     """
-    plot the runtime as a function of chromosome size from a log file
-    probably obsolete now, will keep just in case
+    read a log file and return the desired columns (all if col is [])
     """
+    path+='log/'
     input_file=filename+'.csv'
-    output_file=filename+'.png'
 
     if not os.path.exists(path+input_file):
         print(path+input_file)
@@ -54,11 +52,22 @@ def plot_runtime(path, filename):
     with open(path+input_file) as f:
         lines=[line.rstrip().split(';') for line in f]
         header=lines[0]
-        pos_Asize=header.index('|A|')
-        pos_Bsize=header.index('|B|')
-        pos_dt=header.index('Delta_t')
-        data=[(int(line[pos_Asize])+int(line[pos_Bsize]), convert_dt(line[pos_dt])) for line in lines[1:]]
+        if cols == []:
+            cols=header
+        indices=[header.index(col) for col in cols]
+        data=[[line[i] for i in indices] for line in lines[1:]]
 
+    return data
+
+def plot_runtime(path, filename):
+    """
+    plot the runtime as a function of chromosome size from a log file
+    probably obsolete now, will keep just in case
+    """
+    output_file=filename+'.png'
+    raw_data=read_log_file(path, filename, ['|A|', '|B|', 'Delta_t'])
+    data=[[line[0]+line[1], line[2]] for line in raw_data]
+    
     plt.plot([x[0] for x in data], [x[1]/60 for x in data], 'o')
     plt.xlabel("chromosome size (|A|+|B|)")
     plt.ylabel("runtime (minutes)")
@@ -254,6 +263,22 @@ def log(chrom, output_dir, output_name, elapsed='-1'):
             f.write(header)
         f.write(format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed))
 
+def calculate_average_t50(path, filename):
+    """
+    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
+    """
+    raw_data=read_log_file(path, filename, cols=['t50'])
+    data=[int(line[0]) for line in raw_data]
+    average=np.average(data)
+    return average
+    
+
+def get_output_name(Asize, Bsize, loc, wsize, converge):
+    """
+    return a string that represents the name for any output files depending on chromosome parameters (barring file endings)
+    """
+    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=Asize, Bsize=Bsize, loc=loc, wsize=wsize)+('_c' if converge else '')
+    
 def create_parser():
     """
     creates an argparse parser for the CLI arguments
@@ -265,5 +290,6 @@ def create_parser():
     parser.add_argument('-c', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
-    #parser.add_argument('-a', '--average_t5', 
+    parser.add_argument('-a', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
+    
     return parser
