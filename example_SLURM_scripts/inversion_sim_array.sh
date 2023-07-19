@@ -14,4 +14,4 @@ Asize=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' $co
 Bsize=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $3}' $config)
 
 module load python3/3.11
-python3 inversion_sim.py $Asize $Bsize
+path/to/main.py $Asize $Bsize

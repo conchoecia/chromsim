@@ -64,6 +64,7 @@ def plot_runtime(path, filename):
     plot the runtime as a function of chromosome size from a log file
     probably obsolete now, will keep just in case
     """
+    # might still be useful, but I got to change the code since the log files are named differently now
     output_file=filename+'.png'
     raw_data=read_log_file(path, filename, ['|A|', '|B|', 'Delta_t'])
     data=[[line[0]+line[1], line[2]] for line in raw_data]
