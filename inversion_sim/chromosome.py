@@ -39,6 +39,7 @@ class Chrom():
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
         self.trace_m={}
         self.cycle = 0
+        # [PERFORMANCE] Paralellizing these two functions could save some time.
         self.update_seen()
         self.calculate_m()
         self.first_95_m=-1
@@ -88,10 +89,7 @@ class Chrom():
                 self.shuffle()
             print("{cycle:15d}  100.00%".format(cycle=i+1))
 
-        # calculate all the values
-        # from scipy import stats
-        # import math
-        
+        # calculate all the values        
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
         burn_in=0.25
@@ -129,6 +127,7 @@ class Chrom():
         i0 = sortedi[0]
         i1 = sortedi[1]
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
+        # [PERFORMANCE] Maybe paralellizing update_seen() and calculate_m() here would save some time.
         self.update_seen()
         self.cycle += 1
         self.calculate_m()
@@ -184,9 +183,11 @@ class Chrom():
         """
         calculate m of the current gene sequence
         """
+        # [PERFORMANCE] This looks like it runs a lot of loops in the background. Maybe we could save some runtime by running one loop
+        #   and doing the actions manually?
         sequence=self.get_AB_string()
         substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
-        A = sequence.count('A')
+        A = sequence.count('A') # These two lines seem reduntant, since we have the A and B counts stored in the chromosome.
         B = sequence.count('B')
         AB = substrings.count('AB')
         BA = substrings.count('BA')
