@@ -337,6 +337,6 @@ def create_parser():
     parser.add_argument('-C', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag, and have an alternative option for cycle number
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
-    parser.add_argument('-T', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
+    #parser.add_argument('-T', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
     
     return parser

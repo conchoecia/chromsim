@@ -29,11 +29,11 @@ def main():
     loc=args['level_of_convergence']
     converge=args['converge']
 
-    do_average_t50=args['average_t50']
-    if do_average_t50:
-        average=utils.calculate_average_t50(outdir, output_name)
-        print("average t50: {average:.2f} cycles".format(average=average))
-        return
+    #do_average_t50=args['average_t50']
+    #if do_average_t50:
+    #    average=utils.calculate_average_t50(outdir, output_name)
+    #    print("average t50: {average:.2f} cycles".format(average=average))
+    #    return
     
     # start a timer
     start=time.time()
