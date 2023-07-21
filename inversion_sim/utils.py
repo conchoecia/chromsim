@@ -5,6 +5,7 @@ import numpy as np
 import collections.abc as abc
 import argparse as ap
 import yaml
+from datetime import datetime as dt
 
 class FloatRange(abc.Container):
 
@@ -50,7 +51,7 @@ def read_log_file(path, filename, cols=[]):
     data=None
     
     with open(path+input_file) as f:
-        lines=[line.rstrip().split(';') for line in f]
+        lines=[line.rstrip().split(';') for line in f.readlines()]
         header=lines[0]
         if cols == []:
             cols=header
@@ -211,13 +212,15 @@ def save_fig(output_dir, output_name, yaml=False):
         with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
             yaml.dump(chrom.trace, f)
 
-def plot_results(chrom, output_dir, output_name, yaml=False):
+def plot_results(chrom, output_dir, yaml=False):
     """
     plot the results of a simulated chromosome
     """
     # Use matplotlib to plot each key's list as a line.
     # The index of the list is the x-axis, the value is the y-axis.
 
+    output_name=get_output_name(chrom)
+    
     m_lim=(chrom.first_95_m*2+chrom.sample_rate)//chrom.sample_rate
     lim=(chrom.cycle+chrom.sample_rate)//chrom.sample_rate
     
@@ -241,44 +244,87 @@ def plot_results(chrom, output_dir, output_name, yaml=False):
 
     save_fig(output_dir, output_name, yaml)
 
-def log(chrom, output_dir, output_name, elapsed='-1'):
+def log(chrom, output_dir, elapsed='N/A'):
     """
     log the state of a chromosome
     """
+
+    # write the state to a log file according to the input
     log_dir=output_dir+'log/'
-    log_file=output_name+'.csv'
+    log_file=get_output_name(chrom)+'.csv'
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    newfile=not os.path.exists(log_dir+log_file)
-    mode='w' if newfile else 'a'
+    new_log_file=not os.path.exists(log_dir+log_file)
+    mode='w' if new_log_file else 'a'
     
-    header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
-    format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95:.3f};{sig:.3f};{mu:.3f};{dt}\n'
+    log_header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
+    log_format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95:.3f};{sig:.3f};{mu:.3f};{dt}\n'
+    log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
 
-    from datetime import datetime as dt
-    
     with open(log_dir+log_file, mode) as f:
-        if newfile:
-            f.write(header)
-        f.write(format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed))
+        if new_log_file:
+            f.write(log_header)
+        f.write(log_line)
 
-def calculate_average_t50(path, filename):
+    # write some information about the input paramters into a separate log file
+    metalog_file='metalog.csv'        
+    new_metalog_file=not os.path.exists(log_dir+metalog_file)
+
+    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50\n'
+    metalog_format_string='{A};{B};{conv};{wsize};{loc};'
+    metainfo_format_string='{runs};{avt50:.2f}'
+    metalog_line=metalog_format_string.format(A=chrom.genesA, B=chrom.genesB, conv=chrom.until_converged, wsize=chrom.window_size, loc=chrom.level_of_convergence)
+
+    lines=[]
+    
+    if not new_metalog_file:
+        with open(log_dir+metalog_file, 'r') as f:
+            lines=[line.rstrip() for line in f.readlines()]
+    
+    with open(log_dir+metalog_file, 'w') as f:
+        if new_metalog_file:
+            f.write(metalog_header)
+            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50)
+            f.write(metalog_line+metainfo_string)
+        else:
+            exists=False
+            for line in lines:
+                l=line.split(';')
+                if line.startswith(metalog_line):
+                    run_count=int(l[metalog_header.split(';').index('runs')])
+                    run_count+=1
+                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average_t50(chrom, output_dir))
+                    metalog_line+=metainfo_string
+                    lines[lines.index(line)]=metalog_line
+                    exists=True
+                    break
+            if not exists:
+                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50)
+                lines.append(metalog_line+metainfo_string)
+
+            for line in lines:
+                f.write(line+'\n')
+        
+def calculate_average_t50(chrom, path):
     """
     calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
     """
+    filename=get_output_name(chrom)
     raw_data=read_log_file(path, filename, cols=['t50'])
+    print(path+filename)
+    print(raw_data)
     data=[int(line[0]) for line in raw_data]
     average=np.average(data)
     return average
     
 
-def get_output_name(Asize, Bsize, loc, wsize, converge):
+def get_output_name(chrom):
     """
     return a string that represents the name for any output files depending on chromosome parameters (barring file endings)
     """
-    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=Asize, Bsize=Bsize, loc=loc, wsize=wsize)+('_c' if converge else '')
+    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=chrom.genesA, Bsize=chrom.genesB, loc=chrom.level_of_convergence, wsize=chrom.window_size)+('_c' if chrom.until_converged else '')
     
 def create_parser():
     """
@@ -288,9 +334,9 @@ def create_parser():
     parser.add_argument('Asize', type=int, help="integer value for the number of genes in group A")
     parser.add_argument('Bsize', type=int, help="integer value for the number of genes in group B")
     parser.add_argument('-o', '--output-dir', default='./', help="directory in which to store the output of the program (default: './')")
-    parser.add_argument('-c', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag
+    parser.add_argument('-C', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag, and have an alternative option for cycle number
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
-    parser.add_argument('-a', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
+    parser.add_argument('-T', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
     
     return parser

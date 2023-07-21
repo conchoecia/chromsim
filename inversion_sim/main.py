@@ -28,8 +28,6 @@ def main():
 
     loc=args['level_of_convergence']
     converge=args['converge']
-    
-    output_name=utils.get_output_name(Asize, Bsize, loc, wsize, converge)
 
     do_average_t50=args['average_t50']
     if do_average_t50:
@@ -41,19 +39,18 @@ def main():
     start=time.time()
 
     print("\ncreating chromosome...")
-    chrom=Chrom(0, Asize, Bsize, level_of_convergence=loc, window_size=wsize)
+    chrom=Chrom(0, Asize, Bsize, level_of_convergence=loc, window_size=wsize, until_converged=converge)
     print("\nrunning simulation...")
-    chrom.simulation_cycle(until_converged=converge)
+    chrom.simulation_cycle()
     print("\nplotting results...")
-    utils.plot_results(chrom, outdir, output_name)
+    utils.plot_results(chrom, outdir)
 
     end=time.time()
     elapsed=end-start
     elapsed_string="{minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60))
     print("\nelapsed time: "+elapsed_string)
 
-    log_file_name='inversion_sim'
-    utils.log(chrom, outdir, output_name, elapsed=elapsed_string)
+    utils.log(chrom, outdir, elapsed=elapsed_string)
     
 if __name__ == "__main__":
     main()

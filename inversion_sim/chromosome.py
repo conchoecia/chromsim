@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1):
+    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False):
         # length is the chromosome length
         # The intention is to eventually model varying regions of gene density,
         #    so don't delete this yet.
@@ -28,6 +28,7 @@ class Chrom():
         #   to have been seen before ending the simulation if until_converged is set to True.
         # The value ranges from 0 to 1.
         self.level_of_convergence=level_of_convergence
+        self.until_converged=until_converged
 
         # set the rate of data sampling (each cycle for small chromosomes, all the way to 1% of cycles for large ones)
         self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
@@ -55,14 +56,14 @@ class Chrom():
         ret=format_string.format(cycle=self.cycle, start=AB_string[0:i0], istart=i0, inverted=AB_string[i0:i1], iend=i1-1, end=AB_string[i1:len(AB_string)], m=m)
         return ret
     
-    def simulation_cycle(self, iterations = 0, until_converged = False):
+    def simulation_cycle(self, iterations = 0):
         """
         This function runs the simulation for a given number of iterations, or until done.
         """
         # raise an error if we don't know how to run this method
-        if iterations == 0 and until_converged == False:
+        if iterations == 0 and self.until_converged == False:
             raise ValueError("Please specify either iterations or until_converged.")
-        if until_converged:
+        if self.until_converged:
             converging_at=self.calculate_convergence()
             AB_have_converged=False
             while len(self.seen)/converging_at < self.level_of_convergence: 
