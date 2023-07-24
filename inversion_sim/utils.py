@@ -60,6 +60,20 @@ def read_log_file(path, filename, cols=[]):
 
     return data
 
+#def read_metalog_file(path, cols=[]):
+#    """
+#    read the metalog file and return the desired columns (all if col is [])
+#    """
+#    path+='log/'
+#    input_file='metalog.csv'
+#
+#    if not os.path.exists(path+input_file):
+#        print(path+input_file)
+#        print('metalog file does not exist')
+#        return
+
+    
+
 def plot_runtime(path, filename):
     """
     plot the runtime as a function of chromosome size from a log file
@@ -313,12 +327,24 @@ def calculate_average_t50(chrom, path):
     """
     filename=get_output_name(chrom)
     raw_data=read_log_file(path, filename, cols=['t50'])
-    print(path+filename)
-    print(raw_data)
     data=[int(line[0]) for line in raw_data]
     average=np.average(data)
     return average
-    
+
+def plot_average_t50s(path):
+    """
+    read average t50 values from the metalog file and plot them
+    """
+    raw_data=read_log_file(path, 'metalog', cols=['|A|', '|B|', 'average_t50'])
+    data=[[int(line[0])+int(line[1]), float(line[2])] for line in raw_data]
+
+    fig, ax=plt.subplots()
+    ax.scatter([line[0] for line in data], np.log10([line[1] for line in data]))
+    for line in data:
+        ax.annotate(r'$'+str(line[1])+'$', (line[0], np.log10(line[1])))
+    ax.set_xlabel(r'$|A|+|B|$')
+    ax.set_ylabel(r'$log(\bar{\tau_{50\%}})$')
+    plt.savefig(path+'log/average_t50s.png')
 
 def get_output_name(chrom):
     """
@@ -337,6 +363,6 @@ def create_parser():
     parser.add_argument('-C', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag, and have an alternative option for cycle number
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
-    #parser.add_argument('-T', '--average-t50', action='store_true', help="calculate the average t50 of simulations with the given parameters from a log file")
+    parser.add_argument('-T', '--plot-average-t50', action='store_true', help="plot the average t50 of all previous simulations in this directory, then exit")
     
     return parser

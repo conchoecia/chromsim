@@ -17,6 +17,10 @@ def main():
     if not outdir[-1] == '/':
         outdir+='/'
 
+    avt50=args['plot_average_t50']
+    utils.plot_average_t50s(outdir)
+    return
+        
     Asize=args['Asize']
     Bsize=args['Bsize']
     if Asize <= 0 or Bsize <= 0:
