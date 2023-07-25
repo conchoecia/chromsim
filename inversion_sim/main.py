@@ -25,7 +25,7 @@ def main():
     Asize=args['Asize']
     Bsize=args['Bsize']
     if Asize <= 0 or Bsize <= 0:
-        raise parser.error("Asize and Bsize have to be > 0")
+        raise parser.error("Asize and Bsize have to be specified and be >0")
     
     wsize=args['window_size']
     if not wsize in range(1, Asize+Bsize+1):
@@ -33,6 +33,9 @@ def main():
 
     loc=args['level_of_convergence']
     converge=args['converge']
+    cycles=args['cycle_number']
+    if not converge and cycles <= 0:
+        raise parser.error("please specify a cycle number >0 or use --converge")
 
     #do_average_t50=args['average_t50']
     #if do_average_t50:
@@ -46,7 +49,7 @@ def main():
     print("\ncreating chromosome...")
     chrom=Chrom(0, Asize, Bsize, level_of_convergence=loc, window_size=wsize, until_converged=converge)
     print("\nrunning simulation...")
-    chrom.simulation_cycle()
+    chrom.simulation_cycle(iterations=cycles)
     print("\nplotting results...")
     utils.plot_results(chrom, outdir)
 

@@ -357,10 +357,11 @@ def create_parser():
     creates an argparse parser for the CLI arguments
     """
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
-    parser.add_argument('Asize', type=int, help="integer value for the number of genes in group A")
-    parser.add_argument('Bsize', type=int, help="integer value for the number of genes in group B")
+    parser.add_argument('Asize', type=int, default=-1, help="integer value for the number of genes in group A")
+    parser.add_argument('Bsize', type=int, default=-1, help="integer value for the number of genes in group B")
     parser.add_argument('-o', '--output-dir', default='./', help="directory in which to store the output of the program (default: './')")
-    parser.add_argument('-C', '--converge', default=True, help="specify whether the simulation should run until convergence (default: True)") # this needs to be changed later to just be a flag, and have an alternative option for cycle number
+    parser.add_argument('-c', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (alternative to --converge)")
+    parser.add_argument('-C', '--converge', action='store_true', default=False, help="specify whether the simulation should run until convergence (default: False)")
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
     parser.add_argument('-T', '--plot-average-t50', action='store_true', help="plot the average t50 of all previous simulations in this directory, then exit")
