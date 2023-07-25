@@ -18,8 +18,9 @@ def main():
         outdir+='/'
 
     avt50=args['plot_average_t50']
-    utils.plot_average_t50s(outdir)
-    return
+    if avt50:
+        utils.plot_average_t50s(outdir)
+        return
         
     Asize=args['Asize']
     Bsize=args['Bsize']

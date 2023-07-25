@@ -40,7 +40,7 @@ class Chrom():
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
         self.trace_m={}
         self.cycle = 0
-        # [PERFORMANCE] Paralellizing these two functions could save some time.
+        # [PERFORMANCE] Parallelizing these two functions could save some time.
         self.update_seen()
         self.calculate_m()
         self.first_95_m=-1
@@ -128,7 +128,7 @@ class Chrom():
         i0 = sortedi[0]
         i1 = sortedi[1]
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
-        # [PERFORMANCE] Maybe paralellizing update_seen() and calculate_m() here would save some time.
+        # [PERFORMANCE] Maybe parallelizing update_seen() and calculate_m() here would save some time.
         self.update_seen()
         self.cycle += 1
         self.calculate_m()
