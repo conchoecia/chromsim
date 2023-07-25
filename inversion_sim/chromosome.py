@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False):
+    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0):
         # length is the chromosome length
         # The intention is to eventually model varying regions of gene density,
         #    so don't delete this yet.
@@ -29,6 +29,7 @@ class Chrom():
         # The value ranges from 0 to 1.
         self.level_of_convergence=level_of_convergence
         self.until_converged=until_converged
+        self.translocations_per_cycle=translocations_per_cycle
 
         # set the rate of data sampling (each cycle for small chromosomes, all the way to 1% of cycles for large ones)
         self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
@@ -137,8 +138,8 @@ class Chrom():
         rand=r.random()
         return rand <= cutoff
 
-    def transpose_genes(self, n_per_cycle=5):
-        for i in range(0, n_per_cycle):
+    def transpose_genes(self):
+        for i in range(0, self.translocations_per_cycle):
             i0, i1=self.pick_breakpoints()
             gene=self.gene_list.pop(i0)
             self.gene_list.insert(i1, gene)
