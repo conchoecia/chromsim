@@ -118,16 +118,44 @@ class Chrom():
         for i in range(self.genesA+self.genesB):
             conv+=i
         return conv-1
-    
+
+    def pick_breakpoints(self):
+        i0 = random.randint(1, len(self.gene_list)-1)
+        i1 = random.randint(1, len(self.gene_list)-1)
+        return i0, i1
+
+    def validate_breakpoints(self, i0, i1):
+        """
+        check whether the two breakpoints chosen should be rejected or not
+        """
+        return True # disabled right now
+        import random as r
+        distance=abs(i1-i0)
+        if distance == 0:
+            return False
+        cutoff=1/distance
+        rand=r.random()
+        return rand <= cutoff
+
+    def transpose_genes(self, n_per_cycle=5):
+        for i in range(0, n_per_cycle):
+            i0, i1=self.pick_breakpoints()
+            gene=self.gene_list.pop(i0)
+            self.gene_list.insert(i1, gene)
+            
     def shuffle(self):
         # Randomly pick two indices in the list.
         # Start at one and end at len-1 to not destroy telomeres
-        i0 = random.randint(1, len(self.gene_list)-1)
-        i1 = random.randint(1, len(self.gene_list)-1)
+        i0, i1=0, 0
+        bps_valid=False
+        while not bps_valid:
+            i0, i1=self.pick_breakpoints()
+            bps_valid=self.validate_breakpoints(i0, i1)
         sortedi = sorted([i0, i1]) 
         i0 = sortedi[0]
         i1 = sortedi[1]
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
+        self.transpose_genes()
         # [PERFORMANCE] Maybe parallelizing update_seen() and calculate_m() here would save some time.
         self.update_seen()
         self.cycle += 1
