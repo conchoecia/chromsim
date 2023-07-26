@@ -143,6 +143,8 @@ def set_up_fig(chrom):
     
     ax0.set_xlabel("inversion cycle", fontsize=text_size)
     ax0.set_ylabel("unique interactions", fontsize=text_size)
+    ax3.set_xlabel("inversion cycle", fontsize=text_size)
+    ax3.set_ylabel("unique interactions", fontsize=text_size)
     ax1.set_xlabel("inversion cycle", fontsize=text_size)
     ax1.set_ylabel(r"$m$", fontsize=text_size)
     fig.suptitle(plot_title, fontsize=plot_title_size)
