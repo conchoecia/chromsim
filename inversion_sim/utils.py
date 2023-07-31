@@ -88,24 +88,9 @@ def plot_runtime(path, filename):
     plt.xlabel("chromosome size (|A|+|B|)")
     plt.ylabel("runtime (minutes)")
     plt.savefig(path+output_file)
-
-def set_up_fig(chrom):
-    """
-    create the basic structure of the matplotlib figure
-    returns the figure itself and the axes that are part of it
-    """
-    import matplotlib.pyplot as plt
-
-    figsize=(20, 25)
-    fig=plt.figure(figsize=figsize)
-    gs=fig.add_gridspec(3, 2, width_ratios=[3, 1])
-    ax0=fig.add_subplot(gs[0, :]) # add subplot for gene interaction traces spanning the top half
-    ax1=fig.add_subplot(gs[2, 0]) # add subplot for m values
-    ax2=fig.add_subplot(gs[2, 1], sharey=ax1) # add subplot for m value normal distribution
-    ax3=fig.add_subplot(gs[1, 0], sharex=ax1) # add subplot for interactions in the range of the m plot
-    ax0.set_xlim(0, chrom.cycle)
-    ax1.set_xlim([0, chrom.first_95_m*2])
     
+def init_plot_style_settings():
+
     # figure styling
     plt.style.use('bmh')
 
@@ -127,7 +112,25 @@ def set_up_fig(chrom):
     global subplot_title_size
     subplot_title_size=30
     global text_size
-    text_size=20
+    text_size=20    
+    
+def set_up_fig(chrom):
+    """
+    create the basic structure of the matplotlib figure
+    returns the figure itself and the axes that are part of it
+    """
+    figsize=(20, 25)
+    fig=plt.figure(figsize=figsize)
+    gs=fig.add_gridspec(3, 2, width_ratios=[3, 1])
+    ax0=fig.add_subplot(gs[0, :]) # add subplot for gene interaction traces spanning the top half
+    ax1=fig.add_subplot(gs[2, 0]) # add subplot for m values
+    ax2=fig.add_subplot(gs[2, 1], sharey=ax1) # add subplot for m value normal distribution
+    ax3=fig.add_subplot(gs[1, 0], sharex=ax1) # add subplot for interactions in the range of the m plot
+    ax0.set_xlim(0, chrom.cycle)
+    ax1.set_xlim([0, chrom.first_95_m*2])
+
+    init_plot_style_settings()
+    
     global A_alpha
     A_alpha   = max(1/chrom.genesA, 0.05)
     global B_alpha
@@ -337,15 +340,47 @@ def plot_average_t50s(path):
     """
     read average t50 values from the metalog file and plot them
     """
-    raw_data=read_log_file(path, 'metalog', cols=['|A|', '|B|', 'average_t50'])
-    data=[[int(line[0])+int(line[1]), float(line[2])] for line in raw_data]
+    
+    raw_data=read_log_file(path, 'metalog', cols=['|A|', '|B|', 'average_t50', 'window_size'])
+    data=[[int(line[0])+int(line[1]), float(line[2]), int(line[3])] for line in raw_data if float(line[2]) >= 0]
 
-    fig, ax=plt.subplots()
-    ax.scatter([line[0] for line in data], np.log10([line[1] for line in data]))
+    wsizes=[]
+    grouped_data={}
     for line in data:
-        ax.annotate(r'$'+str(line[1])+'$', (line[0], np.log10(line[1])))
-    ax.set_xlabel(r'$|A|+|B|$')
-    ax.set_ylabel(r'$log(\bar{\tau_{50\%}})$')
+        wsize=line[2]
+        if wsize not in grouped_data:
+            grouped_data[wsize]=[]
+        grouped_data[wsize].append([line[0], line[1]])
+    
+    init_plot_style_settings()
+    fig=plt.figure(figsize=(10, 10))
+    gs=fig.add_gridspec(2, 1)
+    ax0=fig.add_subplot(gs[0, 0]) # add subplot for gene interaction traces spanning the top half
+    ax1=fig.add_subplot(gs[1, 0]) # add subplot for m values
+
+    for k in grouped_data:
+        kdata=grouped_data[k]
+        x=[line[0] for line in kdata]
+        y=[line[1] for line in kdata]
+        logy=np.log(y)
+
+        ax0.scatter(x, y, label='w{}'.format(k))
+        ax1.scatter(x, logy, label='w{}'.format(k))
+    
+    #for line in data:
+    #    offset=max([np.log10(l[1]) for l in data])
+    #    print(offset)
+    #    print(offset*0.2)
+    #    print(np.log10(line[1])+offset*0.2)
+    #    ax0.annotate('w'+str(line[2]), (line[0], line[1]+offset*0.02), bbox=bbox, fontsize=text_size/2)
+    #    ax1.annotate('w'+str(line[2]), (line[0], np.log10(line[1])+offset*0.02), bbox=bbox, fontsize=text_size/2)
+    #ax0.set_xlabel(r'$|A|+|B|$')
+    ax0.set_ylabel(r'$\bar{\tau}_{50\%}$', fontsize=text_size)
+    ax1.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
+    ax1.set_ylabel(r'$ln(\bar{\tau}_{50\%})$', fontsize=text_size)
+    ax0.legend()
+    ax1.legend()
+
     plt.savefig(path+'log/average_t50s.png')
 
 def get_output_name(chrom):
