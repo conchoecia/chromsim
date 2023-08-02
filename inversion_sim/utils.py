@@ -350,9 +350,14 @@ def plot_average_t50s(path):
     """
     read average t50 values from the metalog file and plot them
     """
-    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'window_size']
+    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'average_tentropy', 'window_size']
     raw_data=read_log_file(path, 'metalog', cols=cols)
-    data=[[int(line[cols.index('|A|')])+int(line[cols.index('|B|')]), float(line[cols.index('average_t50')]), float(line[cols.index('average_t100')]), int(line[cols.index('window_size')])] for line in raw_data if float(line[2]) >= 0]
+    data=[[int(line[cols.index('|A|')])+int(line[cols.index('|B|')]),
+           float(line[cols.index('average_t50')]),
+           float(line[cols.index('average_t100')]),
+           float(line[cols.index('average_tentropy')]),
+           int(line[cols.index('window_size')])]
+          for line in raw_data if float(line[2]) >= 0]
 
     wsizes=[]
     grouped_data={}
@@ -360,17 +365,19 @@ def plot_average_t50s(path):
         wsize=line[-1]
         if wsize not in grouped_data:
             grouped_data[wsize]=[]
-        grouped_data[wsize].append([line[0], line[1], line[2]])
+        grouped_data[wsize].append([line[0], line[1], line[2], line[3]])
     
     init_plot_style_settings()
-    fig=plt.figure(figsize=(20, 10))
-    gs=fig.add_gridspec(2, 3)
+    fig=plt.figure(figsize=(20, 20))
+    gs=fig.add_gridspec(4, 2)
     ax0=fig.add_subplot(gs[0, 0])
     ax1=fig.add_subplot(gs[1, 0])
     ax2=fig.add_subplot(gs[0, 1])
     ax3=fig.add_subplot(gs[1, 1])
-    ax4=fig.add_subplot(gs[0, 2])
-    ax5=fig.add_subplot(gs[1, 2])
+    ax4=fig.add_subplot(gs[2, 0])
+    ax5=fig.add_subplot(gs[3, 0])
+    ax6=fig.add_subplot(gs[2, 1])
+    ax7=fig.add_subplot(gs[3, 1])
 
     for k in grouped_data:
         kdata=grouped_data[k]
@@ -381,13 +388,19 @@ def plot_average_t50s(path):
         logydiff=np.log(ydiff)
         yratio=[line[1]/line[2] for line in kdata]
         logyratio=np.log(yratio)
+        ydiffs=[line[1]-line[3] for line in kdata]
+        logydiffs=np.log(ydiffs)
 
-        ax0.scatter(x, y, label='w{}'.format(k))
-        ax1.scatter(x, logy, label='w{}'.format(k))
-        ax2.scatter(x, ydiff, label='w{}'.format(k))
-        ax3.scatter(x, logydiff, label='w{}'.format(k))
-        ax4.scatter(x, yratio, label='w{}'.format(k))
-        ax5.scatter(x, logyratio, label='w{}'.format(k))
+        label='w{}'.format(k)
+
+        ax0.scatter(x, y, label=label)
+        ax1.scatter(x, logy, label=label)
+        ax2.scatter(x, ydiff, label=label)
+        ax3.scatter(x, logydiff, label=label)
+        ax4.scatter(x, yratio, label=label)
+        ax5.scatter(x, logyratio, label=label)
+        ax6.scatter(x, ydiffs, label=label)
+        ax7.scatter(x, logydiffs, label=label)
     
     #for line in data:
     #    offset=max([np.log10(l[1]) for l in data])
@@ -397,21 +410,24 @@ def plot_average_t50s(path):
     #    ax0.annotate('w'+str(line[2]), (line[0], line[1]+offset*0.02), bbox=bbox, fontsize=text_size/2)
     #    ax1.annotate('w'+str(line[2]), (line[0], np.log10(line[1])+offset*0.02), bbox=bbox, fontsize=text_size/2)
     #ax0.set_xlabel(r'$|A|+|B|$')
-    ax1.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
-    ax3.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
     ax5.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
+    ax7.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
     ax0.set_ylabel(r'$\bar{\tau}_{50\%}$', fontsize=text_size)
     ax1.set_ylabel(r'$ln(\bar{\tau}_{50\%})$', fontsize=text_size)
     ax2.set_ylabel(r'$\bar{\tau}_{50\%}-\bar{\tau}_{100\%}$', fontsize=text_size)
     ax3.set_ylabel(r'$ln(\bar{\tau}_{50\%}-\bar{\tau}_{100\%})$', fontsize=text_size)
     ax4.set_ylabel(r'$\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}}$', fontsize=text_size)
     ax5.set_ylabel(r'$ln(\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}})$', fontsize=text_size)
+    ax6.set_ylabel(r'$\bar{\tau}_{50\%}-\bar{\tau}_{S}$', fontsize=text_size)
+    ax7.set_ylabel(r'$ln(\bar{\tau}_{50\%}-\bar{\tau}_{S})$', fontsize=text_size)
     ax0.legend()
     ax1.legend()
     ax2.legend()
     ax3.legend()
     ax4.legend()
     ax5.legend()
+    ax6.legend()
+    ax7.legend()
 
     plt.savefig(path+'log/average_t50s.png')
 
