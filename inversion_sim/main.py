@@ -38,6 +38,8 @@ def main():
         raise parser.error("please specify a cycle number >0 or use --converge")
 
     tpc=args['translocations_per_cycle']
+
+    do_plots=args['plot_curves']
     
     #do_average_t50=args['average_t50']
     #if do_average_t50:
@@ -52,8 +54,9 @@ def main():
     chrom=Chrom(0, Asize, Bsize, level_of_convergence=loc, window_size=wsize, until_converged=converge, translocations_per_cycle=tpc)
     print("\nrunning simulation...")
     chrom.simulation_cycle(iterations=cycles)
-    print("\nplotting results...")
-    utils.plot_results(chrom, outdir)
+    if do_plots:
+        print("\nplotting results...")
+        utils.plot_results(chrom, outdir)
 
     end=time.time()
     elapsed=end-start
