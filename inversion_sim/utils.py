@@ -291,9 +291,9 @@ def log(chrom, output_dir, elapsed='N/A'):
     metalog_file='metalog.csv'        
     new_metalog_file=not os.path.exists(log_dir+metalog_file)
 
-    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50\n'
+    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100\n'
     metalog_format_string='{A};{B};{conv};{wsize};{loc};'
-    metainfo_format_string='{runs};{avt50:.2f}'
+    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f}'
     metalog_line=metalog_format_string.format(A=chrom.genesA, B=chrom.genesB, conv=chrom.until_converged, wsize=chrom.window_size, loc=chrom.level_of_convergence)
 
     lines=[]
@@ -305,7 +305,7 @@ def log(chrom, output_dir, elapsed='N/A'):
     with open(log_dir+metalog_file, 'w') as f:
         if new_metalog_file:
             f.write(metalog_header)
-            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50)
+            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle)
             f.write(metalog_line+metainfo_string)
         else:
             exists=False
@@ -314,13 +314,13 @@ def log(chrom, output_dir, elapsed='N/A'):
                 if line.startswith(metalog_line):
                     run_count=int(l[metalog_header.split(';').index('runs')])
                     run_count+=1
-                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average_t50(chrom, output_dir))
+                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average_t50(chrom, output_dir), avt100=calculate_average_t100(chrom, output_dir))
                     metalog_line+=metainfo_string
                     lines[lines.index(line)]=metalog_line
                     exists=True
                     break
             if not exists:
-                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50)
+                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle)
                 lines.append(metalog_line+metainfo_string)
 
             for line in lines:
@@ -335,37 +335,59 @@ def calculate_average_t50(chrom, path):
     data=[int(line[0]) for line in raw_data]
     average=np.average(data)
     return average
+        
+def calculate_average_t100(chrom, path):
+    """
+    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
+    """
+    filename=get_output_name(chrom)
+    raw_data=read_log_file(path, filename, cols=['cycles'])
+    data=[int(line[0]) for line in raw_data]
+    average=np.average(data)
+    return average
 
 def plot_average_t50s(path):
     """
     read average t50 values from the metalog file and plot them
     """
-    
-    raw_data=read_log_file(path, 'metalog', cols=['|A|', '|B|', 'average_t50', 'window_size'])
-    data=[[int(line[0])+int(line[1]), float(line[2]), int(line[3])] for line in raw_data if float(line[2]) >= 0]
+    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'window_size']
+    raw_data=read_log_file(path, 'metalog', cols=cols)
+    data=[[int(line[cols.index('|A|')])+int(line[cols.index('|B|')]), float(line[cols.index('average_t50')]), float(line[cols.index('average_t100')]), int(line[cols.index('window_size')])] for line in raw_data if float(line[2]) >= 0]
 
     wsizes=[]
     grouped_data={}
     for line in data:
-        wsize=line[2]
+        wsize=line[-1]
         if wsize not in grouped_data:
             grouped_data[wsize]=[]
-        grouped_data[wsize].append([line[0], line[1]])
+        grouped_data[wsize].append([line[0], line[1], line[2]])
     
     init_plot_style_settings()
-    fig=plt.figure(figsize=(10, 10))
-    gs=fig.add_gridspec(2, 1)
-    ax0=fig.add_subplot(gs[0, 0]) # add subplot for gene interaction traces spanning the top half
-    ax1=fig.add_subplot(gs[1, 0]) # add subplot for m values
+    fig=plt.figure(figsize=(20, 10))
+    gs=fig.add_gridspec(2, 3)
+    ax0=fig.add_subplot(gs[0, 0])
+    ax1=fig.add_subplot(gs[1, 0])
+    ax2=fig.add_subplot(gs[0, 1])
+    ax3=fig.add_subplot(gs[1, 1])
+    ax4=fig.add_subplot(gs[0, 2])
+    ax5=fig.add_subplot(gs[1, 2])
 
     for k in grouped_data:
         kdata=grouped_data[k]
         x=[line[0] for line in kdata]
         y=[line[1] for line in kdata]
         logy=np.log(y)
+        ydiff=[line[2]-line[1] for line in kdata]
+        logydiff=np.log(ydiff)
+        yratio=[line[1]/line[2] for line in kdata]
+        logyratio=np.log(yratio)
 
         ax0.scatter(x, y, label='w{}'.format(k))
         ax1.scatter(x, logy, label='w{}'.format(k))
+        ax2.scatter(x, ydiff, label='w{}'.format(k))
+        ax3.scatter(x, logydiff, label='w{}'.format(k))
+        ax4.scatter(x, yratio, label='w{}'.format(k))
+        ax5.scatter(x, logyratio, label='w{}'.format(k))
     
     #for line in data:
     #    offset=max([np.log10(l[1]) for l in data])
@@ -375,11 +397,21 @@ def plot_average_t50s(path):
     #    ax0.annotate('w'+str(line[2]), (line[0], line[1]+offset*0.02), bbox=bbox, fontsize=text_size/2)
     #    ax1.annotate('w'+str(line[2]), (line[0], np.log10(line[1])+offset*0.02), bbox=bbox, fontsize=text_size/2)
     #ax0.set_xlabel(r'$|A|+|B|$')
-    ax0.set_ylabel(r'$\bar{\tau}_{50\%}$', fontsize=text_size)
     ax1.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
+    ax3.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
+    ax5.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
+    ax0.set_ylabel(r'$\bar{\tau}_{50\%}$', fontsize=text_size)
     ax1.set_ylabel(r'$ln(\bar{\tau}_{50\%})$', fontsize=text_size)
+    ax2.set_ylabel(r'$\bar{\tau}_{50\%}-\bar{\tau}_{100\%}$', fontsize=text_size)
+    ax3.set_ylabel(r'$ln(\bar{\tau}_{50\%}-\bar{\tau}_{100\%})$', fontsize=text_size)
+    ax4.set_ylabel(r'$\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}}$', fontsize=text_size)
+    ax5.set_ylabel(r'$ln(\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}})$', fontsize=text_size)
     ax0.legend()
     ax1.legend()
+    ax2.legend()
+    ax3.legend()
+    ax4.legend()
+    ax5.legend()
 
     plt.savefig(path+'log/average_t50s.png')
 
