@@ -279,7 +279,7 @@ def log(chrom, output_dir, elapsed='N/A'):
     mode='w' if new_log_file else 'a'
     
     log_header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
-    log_format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95:.3f};{sig:.3f};{mu:.3f};{dt}\n'
+    log_format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95};{sig:.3f};{mu:.3f};{dt}\n'
     log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
 
     with open(log_dir+log_file, mode) as f:
@@ -291,9 +291,9 @@ def log(chrom, output_dir, elapsed='N/A'):
     metalog_file='metalog.csv'        
     new_metalog_file=not os.path.exists(log_dir+metalog_file)
 
-    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100\n'
+    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100,average_tentropy\n'
     metalog_format_string='{A};{B};{conv};{wsize};{loc};'
-    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f}'
+    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f};{avtent:.2f}'
     metalog_line=metalog_format_string.format(A=chrom.genesA, B=chrom.genesB, conv=chrom.until_converged, wsize=chrom.window_size, loc=chrom.level_of_convergence)
 
     lines=[]
@@ -305,7 +305,7 @@ def log(chrom, output_dir, elapsed='N/A'):
     with open(log_dir+metalog_file, 'w') as f:
         if new_metalog_file:
             f.write(metalog_header)
-            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle)
+            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle, avtent=chrom.first_95_m)
             f.write(metalog_line+metainfo_string)
         else:
             exists=False
@@ -314,37 +314,37 @@ def log(chrom, output_dir, elapsed='N/A'):
                 if line.startswith(metalog_line):
                     run_count=int(l[metalog_header.split(';').index('runs')])
                     run_count+=1
-                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average_t50(chrom, output_dir), avt100=calculate_average_t100(chrom, output_dir))
+                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average(chrom, output_dir, 't50'), avt100=calculate_average(chrom, output_dir, 'cycles'), avtent=calculate_average(chrom, output_dir, 'first_95_m'))
                     metalog_line+=metainfo_string
                     lines[lines.index(line)]=metalog_line
                     exists=True
                     break
             if not exists:
-                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle)
+                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle, avtent=chrom.first_95_m)
                 lines.append(metalog_line+metainfo_string)
 
             for line in lines:
                 f.write(line+'\n')
         
-def calculate_average_t50(chrom, path):
+def calculate_average(chrom, path, col):
     """
     calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
     """
     filename=get_output_name(chrom)
-    raw_data=read_log_file(path, filename, cols=['t50'])
+    raw_data=read_log_file(path, filename, cols=[col])
     data=[int(line[0]) for line in raw_data]
     average=np.average(data)
     return average
         
-def calculate_average_t100(chrom, path):
-    """
-    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
-    """
-    filename=get_output_name(chrom)
-    raw_data=read_log_file(path, filename, cols=['cycles'])
-    data=[int(line[0]) for line in raw_data]
-    average=np.average(data)
-    return average
+#def calculate_average_t100(chrom, path):
+#,average_tentrop;{avtent:.2f}y    """
+#,average_tentropy    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
+#,average_tentropy    """
+#,average_tentrop;{avtent:.2f}y    filename=get_output_name(chrom)
+#,average_tentrop;{avtent:.2f}y    raw_data=read_log_file(path, filename, cols=['cycles'])
+#,average_tentrop;{avtent:.2f}y    data=[int(line[0]) for line in raw_data]
+#,average_tentrop;{avtent:.2f}y    average=np.average(data)
+#,average_tentrop;{avtent:.2f}y    return average;{avtent:.2f}
 
 def plot_average_t50s(path):
     """
