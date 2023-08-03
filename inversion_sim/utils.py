@@ -5,6 +5,7 @@ import numpy as np
 import collections.abc as abc
 import argparse as ap
 import yaml
+import glob
 from datetime import datetime as dt
 
 class FloatRange(abc.Container):
@@ -55,6 +56,7 @@ def read_log_file(path, filename, cols=[]):
         header=lines[0]
         if cols == []:
             cols=header
+            
         indices=[header.index(col) for col in cols]
         data=[[line[i] for i in indices] for line in lines[1:]]
 
@@ -287,44 +289,40 @@ def log(chrom, output_dir, elapsed='N/A'):
             f.write(log_header)
         f.write(log_line)
 
+def metalog(output_dir):
     # write some information about the input paramters into a separate log file
-    metalog_file='metalog.csv'        
-    new_metalog_file=not os.path.exists(log_dir+metalog_file)
+    log_dir=output_dir+'log/'
+    metalog_file='metalog.csv'
 
-    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100,average_tentropy\n'
+    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100;average_ts\n'
     metalog_format_string='{A};{B};{conv};{wsize};{loc};'
-    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f};{avtent:.2f}'
-    metalog_line=metalog_format_string.format(A=chrom.genesA, B=chrom.genesB, conv=chrom.until_converged, wsize=chrom.window_size, loc=chrom.level_of_convergence)
+    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f};{avts:.2f}\n'
 
-    lines=[]
-    
-    if not new_metalog_file:
-        with open(log_dir+metalog_file, 'r') as f:
-            lines=[line.rstrip() for line in f.readlines()]
-    
-    with open(log_dir+metalog_file, 'w') as f:
-        if new_metalog_file:
-            f.write(metalog_header)
-            metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle, avtent=chrom.first_95_m)
-            f.write(metalog_line+metainfo_string)
-        else:
-            exists=False
-            for line in lines:
-                l=line.split(';')
-                if line.startswith(metalog_line):
-                    run_count=int(l[metalog_header.split(';').index('runs')])
-                    run_count+=1
-                    metainfo_string=metainfo_format_string.format(runs=run_count, avt50=calculate_average(chrom, output_dir, 't50'), avt100=calculate_average(chrom, output_dir, 'cycles'), avtent=calculate_average(chrom, output_dir, 'first_95_m'))
-                    metalog_line+=metainfo_string
-                    lines[lines.index(line)]=metalog_line
-                    exists=True
-                    break
-            if not exists:
-                metainfo_string=metainfo_format_string.format(runs=1, avt50=chrom.t50, avt100=chrom.cycle, avtent=chrom.first_95_m)
-                lines.append(metalog_line+metainfo_string)
+    logfiles=glob.glob(log_dir+'inversion_sim*')
+    with open(log_dir+metalog_file, 'w') as mf:
+        mf.write(metalog_header)
 
-            for line in lines:
-                f.write(line+'\n')
+        for logfile in logfiles:
+            s=logfile.split('/')[-1].split('_')
+            sizes=s[2].split('-')
+            Asize=int(sizes[0][1:])
+            Bsize=int(sizes[1][1:])
+            loc=int(s[3][1:])
+            wsize=int(s[4][1:])
+            converging=(len(s) == 6)
+            runs=[]
+
+            with open(logfile) as lf:
+                runs=[run.rstrip().split(';') for run in lf.readlines()]
+
+            header=runs[0]
+            t50s=[float(run[header.index('t50')]) for run in runs[1:]]
+            t100s=[float(run[header.index('cycles')]) for run in runs[1:]]
+            tss=[float(run[header.index('first_95_m')]) for run in runs[1:]]
+            
+            metalog_line=metalog_format_string.format(A=Asize, B=Bsize, conv=converging, wsize=wsize, loc=loc)        
+            metainfo_string=metainfo_format_string.format(runs=len(runs), avt50=np.average(t50s), avt100=np.average(t100s), avts=np.average(tss))
+            mf.write(metalog_line+metainfo_string)
         
 def calculate_average(chrom, path, col):
     """
@@ -350,12 +348,12 @@ def plot_average_t50s(path):
     """
     read average t50 values from the metalog file and plot them
     """
-    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'average_tentropy', 'window_size']
+    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'average_ts', 'window_size']
     raw_data=read_log_file(path, 'metalog', cols=cols)
     data=[[int(line[cols.index('|A|')])+int(line[cols.index('|B|')]),
            float(line[cols.index('average_t50')]),
            float(line[cols.index('average_t100')]),
-           float(line[cols.index('average_tentropy')]),
+           float(line[cols.index('average_ts')]),
            int(line[cols.index('window_size')])]
           for line in raw_data if float(line[2]) >= 0]
 

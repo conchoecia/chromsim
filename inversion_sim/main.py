@@ -17,9 +17,13 @@ def main():
     if not outdir[-1] == '/':
         outdir+='/'
 
+    logmeta=args['metalog']
+    if logmeta:
+        utils.metalog(outdir)
     avt50=args['plot_average_t50']
     if avt50:
         utils.plot_average_t50s(outdir)
+    if avt50 or logmeta:
         return
         
     Asize=args['Asize']
