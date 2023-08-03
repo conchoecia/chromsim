@@ -24,7 +24,7 @@ def main():
         
     Asize=args['Asize']
     Bsize=args['Bsize']
-    if Asize <= 0 or Bsize <= 0:
+    if not Asize or not Bsize:
         raise parser.error("Asize and Bsize have to be specified and be >0")
     
     wsize=args['window_size']
