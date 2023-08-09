@@ -45,7 +45,6 @@ class Chrom():
         
         # [PERFORMANCE] Parallelizing these two functions could save some time.
         self.update_seen(0, len(self.gene_list)-1)
-        #self.calculate_m()
         self.first_95_m=-1
         self.m_sigma=-1
         self.m_mu=-1
@@ -157,15 +156,10 @@ class Chrom():
         sortedi = sorted([i0, i1]) 
         i0 = sortedi[0]
         i1 = sortedi[1]
-        #print("\nbefore: " + " - ".join(self.gene_list))
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
-        #print("after: " + " - ".join(self.gene_list))
         self.transpose_genes()
         # [PERFORMANCE] Maybe parallelizing update_seen() and calculate_m() here would save some time.
         self.update_cycle(i0, i1)
-        #self.update_seen()
-        #self.cycle += 1
-        #self.calculate_m()
 
     def get_window(self, i):
         return max(i-self.window_size, 0), min(i+self.window_size, len(self.gene_list)-1)
@@ -180,10 +174,6 @@ class Chrom():
         self.update_seen(start, end)
         self.cycle+=1
         self.update_m(i0, i1)
-        #print(self.trace_m2[self.cycle])
-        #self.calculate_m()
-        #print(self.trace_m[self.cycle])
-        #print("-")
         
     def update_seen(self, start, end):
         """
@@ -205,11 +195,8 @@ class Chrom():
                     self.trace_BtoA[k].append(self.trace_BtoA[k][-1])
         # go through all of the pairs in the list to update self.seen
         # [PERFORMANCE] this should be doable without iterating over the entire list but just the window around the breakpoints, I think
-        #for i in range(len(self.gene_list)-1):
         for i in range(start, end):
-            #for l in range(i+1, min(len(self.gene_list)-1, i+self.window_size+1)):
             for l in range(i+1, min(end+1, i+self.window_size+1)):
-                #print("in loop")
                 this_edge = tuple(sorted([self.gene_list[i], self.gene_list[l]]))
                 if this_edge not in self.seen:
                     self.seen[this_edge] = self.cycle
@@ -248,14 +235,7 @@ class Chrom():
         new_pair0=(self.gene_list[i0-1:i0+1])
         new_pair1=(self.gene_list[i1-1:i1+1])
         delta_transitions=check_AB_pair(new_pair0[0], new_pair0[1])+check_AB_pair(new_pair1[0], new_pair1[1])-check_AB_pair(old_pair0[0], old_pair0[1])-check_AB_pair(old_pair1[0], old_pair1[1])
-        #print(old_pair0)
-        #print(old_pair1)
-        #print(new_pair0)
-        #print(new_pair1)
-        #print(delta_transitions)
         new_transitions=old_transitions+delta_transitions
-        #print(old_transitions)
-        #print(new_transitions)
         new_m=(new_transitions-1)/self.m_const
         self.trace_m[self.cycle]=new_m
 
@@ -264,7 +244,7 @@ class Chrom():
         [OBSOLETE] (I think)
         calculate m of the current gene sequence
         """
-        print("PANIC")
+        raise NotImplementedError()
         # [PERFORMANCE] This looks like it runs a lot of loops in the background. Maybe we could save some runtime by running one loop
         #   and doing the actions manually?
         sequence=self.get_AB_string()
@@ -275,8 +255,6 @@ class Chrom():
         BA=sequence.count('BA') #= substrings.count('BA')
         m = (AB+BA-1)/self.m_const #((2* A * B)/(A+B) - 1)
         self.trace_m[self.cycle]=m
-        #if self.cycle == 0:
-        #    self.trace_m2[self.cycle]=m
     
     def _median(self, lst):
         sortedLst = sorted(lst)
