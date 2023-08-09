@@ -182,9 +182,10 @@ class Chrom():
                     self.trace_BtoA[k].append(self.trace_BtoA[k][-1])
         # go through all of the pairs in the list to update self.seen
         # [PERFORMANCE] this should be doable without iterating over the entire list but just the window around the breakpoints, I think
-        for i in range(len(self.gene_list)-1):
-            #print(range(i+1, min(len(self.gene_list)-1, i+self.window_size+1)))
-            for l in range(i+1, min(len(self.gene_list), i+self.window_size+1)):
+        #for i in range(len(self.gene_list)-1):
+        for i in range(start, end):
+            #for l in range(i+1, min(len(self.gene_list)-1, i+self.window_size+1)):
+            for l in range(i+1, min(end+1, i+self.window_size+1)):
                 #print("in loop")
                 this_edge = tuple(sorted([self.gene_list[i], self.gene_list[l]]))
                 if this_edge not in self.seen:
