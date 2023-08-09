@@ -15,6 +15,7 @@ class Chrom():
         self.genesA = gene_quantityA
         self.genesB = gene_quantityB
         self.size=self.genesA+self.genesB
+        self.m_const=2*self.genesA*self.genesB/(self.genesA+self.genesB-1)
 
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
         # seen is a list of genes that have already interacted with each other, value is cycle
@@ -39,11 +40,12 @@ class Chrom():
         self.trace      = {k:[] for k in self.gene_list}
         self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
-        self.trace_m={}
+        self.trace_m={0:0}
         self.cycle = 0
+        
         # [PERFORMANCE] Parallelizing these two functions could save some time.
-        self.update_seen()
-        self.calculate_m()
+        self.update_seen(0, len(self.gene_list)-1)
+        #self.calculate_m()
         self.first_95_m=-1
         self.m_sigma=-1
         self.m_mu=-1
@@ -155,14 +157,35 @@ class Chrom():
         sortedi = sorted([i0, i1]) 
         i0 = sortedi[0]
         i1 = sortedi[1]
+        #print("\nbefore: " + " - ".join(self.gene_list))
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
+        #print("after: " + " - ".join(self.gene_list))
         self.transpose_genes()
         # [PERFORMANCE] Maybe parallelizing update_seen() and calculate_m() here would save some time.
-        self.update_seen()
-        self.cycle += 1
-        self.calculate_m()
+        self.update_cycle(i0, i1)
+        #self.update_seen()
+        #self.cycle += 1
+        #self.calculate_m()
 
-    def update_seen(self):
+    def get_window(self, i):
+        return max(i-self.window_size, 0), min(i+self.window_size, len(self.gene_list)-1)
+        
+    def update_cycle(self, i0, i1):
+        """
+        update only in the window around the break points
+        """
+        start, end=self.get_window(i0)
+        self.update_seen(start, end)
+        start, end=self.get_window(i1)
+        self.update_seen(start, end)
+        self.cycle+=1
+        self.update_m(i0, i1)
+        #print(self.trace_m2[self.cycle])
+        #self.calculate_m()
+        #print(self.trace_m[self.cycle])
+        #print("-")
+        
+    def update_seen(self, start, end):
         """
         update the seen graph
         """
@@ -211,21 +234,50 @@ class Chrom():
     def get_AB_string(self):
         return ''.join([gene[0] for gene in self.gene_list])
 
+    def update_m(self, i0, i1):
+        """
+        update m based on changes around the break points instead of iterating over the entire list
+        """
+        old_m=self.trace_m[self.cycle-1]
+        if i0==i1:
+            self.trace_m[self.cycle]=old_m
+            return
+        old_transitions=old_m*self.m_const+1
+        old_pair0=(self.gene_list[i0-1], self.gene_list[i1-1])
+        old_pair1=(self.gene_list[i0], self.gene_list[i1])
+        new_pair0=(self.gene_list[i0-1:i0+1])
+        new_pair1=(self.gene_list[i1-1:i1+1])
+        delta_transitions=check_AB_pair(new_pair0[0], new_pair0[1])+check_AB_pair(new_pair1[0], new_pair1[1])-check_AB_pair(old_pair0[0], old_pair0[1])-check_AB_pair(old_pair1[0], old_pair1[1])
+        #print(old_pair0)
+        #print(old_pair1)
+        #print(new_pair0)
+        #print(new_pair1)
+        #print(delta_transitions)
+        new_transitions=old_transitions+delta_transitions
+        #print(old_transitions)
+        #print(new_transitions)
+        new_m=(new_transitions-1)/self.m_const
+        self.trace_m[self.cycle]=new_m
+
     def calculate_m(self):
         """
+        [OBSOLETE] (I think)
         calculate m of the current gene sequence
         """
+        print("PANIC")
         # [PERFORMANCE] This looks like it runs a lot of loops in the background. Maybe we could save some runtime by running one loop
         #   and doing the actions manually?
         sequence=self.get_AB_string()
         substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
-        A = sequence.count('A') # These two lines seem reduntant, since we have the A and B counts stored in the chromosome.
-        B = sequence.count('B')
-        AB = substrings.count('AB')
-        BA = substrings.count('BA')
-        m = (AB + BA - 1)/ ((2* A * B)/(A+B) - 1)
+        A=self.genesA #= sequence.count('A') # These two lines seem reduntant, since we have the A and B counts stored in the chromosome.
+        B=self.genesB # = sequence.count('B')
+        AB=sequence.count('AB') #= substrings.count('AB')
+        BA=sequence.count('BA') #= substrings.count('BA')
+        m = (AB+BA-1)/self.m_const #((2* A * B)/(A+B) - 1)
         self.trace_m[self.cycle]=m
-        
+        #if self.cycle == 0:
+        #    self.trace_m2[self.cycle]=m
+    
     def _median(self, lst):
         sortedLst = sorted(lst)
         lstLen = len(lst)
@@ -244,3 +296,8 @@ class Chrom():
         k = list(trace.keys())[0]
         # calculate the median of all the traces at each sampling point
         return [self._median([trace[j][i] for j in trace]) for i in range(len(trace[k]))]
+
+# static functions
+def check_AB_pair(AB0, AB1):
+    #print(AB0, AB1)
+    return 0 if AB0[0] == AB1[0] else 1
