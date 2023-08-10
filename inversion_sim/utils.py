@@ -82,17 +82,17 @@ def plot_runtime(path, filename):
     probably obsolete now, will keep just in case
     """
     # might still be useful, but I got to change the code since the log files are named differently now
-    output_file=filename+'.png'
-    raw_data=read_log_file(path, filename, ['|A|', '|B|', 'Delta_t'])
-    data=[[line[0]+line[1], line[2]] for line in raw_data]
+    output_file='runtime.png'
+    raw_data=read_log_file(path, filename, ['|A|', '|B|', 'average_runtime'])
+    data=[[int(line[0])+int(line[1]), line[2]] for line in raw_data]
     
-    plt.plot([x[0] for x in data], [x[1]/60 for x in data], 'o')
+    plt.plot([x[0] for x in data], [runtime_to_int(x[1])/60 for x in data], 'o')
     plt.xlabel("chromosome size (|A|+|B|)")
     plt.ylabel("runtime (minutes)")
     plt.savefig(path+output_file)
+    print('success')
     
 def init_plot_style_settings():
-
     # figure styling
     plt.style.use('bmh')
 
@@ -163,11 +163,21 @@ def plot_trace(chrom, trace, ax, lim, color, alpha):
     """
     plot trace on ax from 0 to lim
     """
+    xtot, ytot=[], []
     for k in trace:
-        ax.plot([x*chrom.sample_rate for x in range(lim)],
-                 trace[k][:lim], color=color, lw = setlw, alpha=alpha)
-    ax.plot([x*chrom.sample_rate for x in range(lim)],
-            chrom._median_of_trace(trace)[:lim], color=color, lw = setlw*10, alpha=0.75)
+        x, y= [], []
+        for tup in trace[k]:
+            if tup[0] > lim:
+                break
+            x.append(tup[0])
+            y.append(tup[1])
+            xtot.append(tup[0])
+            ytot.append(tup[1])
+        ax.plot(x, y, color=color, lw = setlw, alpha=alpha)
+    #ymed=chrom._median_of_trace(trace)
+    xtot=sorted(xtot)
+    ytot=sorted(ytot)
+    ax.plot(xtot, ytot, color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
     """
@@ -242,8 +252,8 @@ def plot_results(chrom, output_dir, yaml=False):
 
     output_name=get_output_name(chrom)
     
-    m_lim=(chrom.first_95_m*2+chrom.sample_rate)//chrom.sample_rate
-    lim=(chrom.cycle+chrom.sample_rate)//chrom.sample_rate
+    m_lim=(chrom.first_95_m*2)#+chrom.sample_rate)//chrom.sample_rate
+    lim=(chrom.cycle)#+chrom.sample_rate)//chrom.sample_rate
     
     fig, ax0, ax1, ax2, ax3=set_up_fig(chrom)
 
@@ -289,14 +299,23 @@ def log(chrom, output_dir, elapsed='N/A'):
             f.write(log_header)
         f.write(log_line)
 
+def runtime_to_int(runtime):
+    arr=runtime.split(':')
+    mins=int(arr[0])
+    secs=int(arr[1])
+    return mins*60+secs
+
+def int_to_runtime(f):
+    return str(int(f//60))+':'+str(int(f%60)).zfill(2)
+        
 def metalog(output_dir):
     # write some information about the input paramters into a separate log file
     log_dir=output_dir+'log/'
     metalog_file='metalog.csv'
 
-    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100;average_ts\n'
+    metalog_header='|A|;|B|;converging;window_size;level_of_convergence;runs;average_t50;average_t100;average_ts;average_runtime\n'
     metalog_format_string='{A};{B};{conv};{wsize};{loc};'
-    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f};{avts:.2f}\n'
+    metainfo_format_string='{runs};{avt50:.2f};{avt100:.2f};{avts:.2f};{avrt}\n'
 
     logfiles=glob.glob(log_dir+'inversion_sim*')
     with open(log_dir+metalog_file, 'w') as mf:
@@ -319,9 +338,10 @@ def metalog(output_dir):
             t50s=[float(run[header.index('t50')]) for run in runs[1:]]
             t100s=[float(run[header.index('cycles')]) for run in runs[1:]]
             tss=[float(run[header.index('first_95_m')]) for run in runs[1:]]
+            rts=[runtime_to_int(run[header.index('Delta_t')]) for run in runs[1:]]
             
             metalog_line=metalog_format_string.format(A=Asize, B=Bsize, conv=converging, wsize=wsize, loc=loc)        
-            metainfo_string=metainfo_format_string.format(runs=len(runs), avt50=np.average(t50s), avt100=np.average(t100s), avts=np.average(tss))
+            metainfo_string=metainfo_format_string.format(runs=len(runs), avt50=np.average(t50s), avt100=np.average(t100s), avts=np.average(tss), avrt=int_to_runtime(np.average(rts)))
             mf.write(metalog_line+metainfo_string)
         
 def calculate_average(chrom, path, col):

@@ -42,6 +42,7 @@ class Chrom():
         self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
         self.trace_m={0:0}
         self.cycle = 0
+        self.init_trace()
         
         # [PERFORMANCE] Parallelizing these two functions could save some time.
         self.update_seen(0, len(self.gene_list)-1)
@@ -57,6 +58,22 @@ class Chrom():
         m=self.trace_m[self.cycle]
         ret=format_string.format(cycle=self.cycle, start=AB_string[0:i0], istart=i0, inverted=AB_string[i0:i1], iend=i1-1, end=AB_string[i1:len(AB_string)], m=m)
         return ret
+
+    def init_trace(self):
+        # increment the trace structure so we can modify
+        for k in self.trace: # self.trace:
+            #if len(self.trace[k]) == 0:
+            self.trace[k].append((self.cycle, 0))
+            if k in self.trace_AtoB:
+                self.trace_AtoB[k].append((self.cycle, 0))
+            if k in self.trace_BtoA:
+                self.trace_BtoA[k].append((self.cycle, 0))
+            #elif self.cycle % self.sample_rate == 0:
+            #    self.trace[k].append((self.cycle, self.trace[k][-1]))
+            #    if k in self.trace_AtoB:
+            #        self.trace_AtoB[k].append((self.cycle, self.trace_AtoB[k][-1]))
+            #    if k in self.trace_BtoA:
+            #        self.trace_BtoA[k].append((self.cycle, self.trace_BtoA[k][-1]))
     
     def simulation_cycle(self, iterations = 0):
         """
@@ -168,31 +185,17 @@ class Chrom():
         """
         update only in the window around the break points
         """
+        self.cycle+=1
         start, end=self.get_window(i0)
         self.update_seen(start, end)
         start, end=self.get_window(i1)
         self.update_seen(start, end)
-        self.cycle+=1
         self.update_m(i0, i1)
         
     def update_seen(self, start, end):
         """
         update the seen graph
         """
-        # increment the trace structure so we can modify
-        for k in self.trace:
-            if len(self.trace[k]) == 0:
-                self.trace[k].append(0)
-                if k in self.trace_AtoB:
-                    self.trace_AtoB[k].append(0)
-                if k in self.trace_BtoA:
-                    self.trace_BtoA[k].append(0)
-            elif self.cycle % self.sample_rate == 0:
-                self.trace[k].append(self.trace[k][-1])
-                if k in self.trace_AtoB:
-                    self.trace_AtoB[k].append(self.trace_AtoB[k][-1])
-                if k in self.trace_BtoA:
-                    self.trace_BtoA[k].append(self.trace_BtoA[k][-1])
         # go through all of the pairs in the list to update self.seen
         # [PERFORMANCE] this should be doable without iterating over the entire list but just the window around the breakpoints, I think
         for i in range(start, end):
@@ -203,19 +206,19 @@ class Chrom():
                     # update the trace structure
                     for j in [0,1]:
                         other = 1 if j == 0 else 0
-                        self.trace[this_edge[j]][-1] += 1
+                        self.trace[this_edge[j]].append((self.cycle, self.trace[this_edge[j]][-1][1]+1))#[-1] += 1
                         if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
-                            self.trace_AtoB[this_edge[j]][-1] += 1
+                            self.trace_AtoB[this_edge[j]].append((self.cycle, self.trace_AtoB[this_edge[j]][-1][1]+1)) #.[-1] += 1
                             # check whether the latest count of cross-group gene interactions for this gene is equal
                             #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
                             # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
                             #   cannot interact with the other telomere)
-                            if self.trace_AtoB[this_edge[j]][-1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                            if self.trace_AtoB[this_edge[j]][-1][1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
                                 self.converged_AtoB+=1
                         if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
-                            self.trace_BtoA[this_edge[j]][-1] += 1
+                            self.trace_BtoA[this_edge[j]].append((self.cycle, self.trace_BtoA[this_edge[j]][-1][1]+1)) #[-1] += 1
                             # same as above, but for B-to-A
-                            if self.trace_BtoA[this_edge[j]][-1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
+                            if self.trace_BtoA[this_edge[j]][-1][1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
                                 self.converged_BtoA+=1
                 
     def get_AB_string(self):
@@ -271,9 +274,10 @@ class Chrom():
         Gets the median value of the supplied traces.
         """
         # get a random key of self.trace
+        # This is not a random key, it is always the first (i.e. A.1 or B.1).
         k = list(trace.keys())[0]
         # calculate the median of all the traces at each sampling point
-        return [self._median([trace[j][i] for j in trace]) for i in range(len(trace[k]))]
+        return [self._median([trace[j][i][1] for j in trace]) for i in range(len(trace[k]))]
 
 # static functions
 def check_AB_pair(AB0, AB1):
