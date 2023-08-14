@@ -18,6 +18,9 @@ class Chrom():
         self.m_const=2*self.genesA*self.genesB/(self.genesA+self.genesB-1)
 
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
+        self.original_gene_list=self.gene_list.copy()
+        self.t50_gene_list=None
+        self.tS_gene_list=None
         # seen is a list of genes that have already interacted with each other, value is cycle
         self.seen = {}
         self.window_size=window_size
@@ -46,7 +49,7 @@ class Chrom():
         
         # [PERFORMANCE] Parallelizing these two functions could save some time.
         self.update_seen(0, len(self.gene_list)-1)
-        self.first_95_m=-1
+        self.tS=-1
         self.m_sigma=-1
         self.m_mu=-1
     
@@ -90,6 +93,7 @@ class Chrom():
 
                 if self.t50 < 0 and len(self.seen) >= converging_at/2:
                     self.t50=self.cycle
+                    self.t50_gene_list=self.gene_list.copy()
                     print("reached t50 at "+str(self.t50))
                 if self.t50 >= 0 and not AB_have_converged:
                     AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
@@ -127,7 +131,7 @@ class Chrom():
             if k[1] >= lower_bound:
                 crossed_lower_bound_at=k[0]
                 break
-        self.first_95_m=crossed_lower_bound_at   
+        self.tS=crossed_lower_bound_at   
 
     def calculate_convergence(self):
         """
