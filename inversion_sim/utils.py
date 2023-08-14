@@ -115,8 +115,37 @@ def init_plot_style_settings():
     subplot_title_size=30
     global text_size
     text_size=20    
+
+def set_up_dot_fig(chrom):
+    """
+    TODO
+    """
+    figsize=(35, 10)
+    fig=plt.figure(figsize=figsize)
+    gs=fig.add_gridspec(1, 3)
+    ax0=fig.add_subplot(gs[0, 0])
+    ax1=fig.add_subplot(gs[0, 1])
+    ax2=fig.add_subplot(gs[0, 2])
+
+    plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
+    subplot0_title=r"dotplot start vs. $\tau{100\%}$ of simulation"
+    subplot1_title=r"dotplot start vs. $\tau_{50\%}$ of simulation"
+    subplot2_title=r"dotplot start vs. $\tau_{S}$ of simulation"
+
+    ax0.set_xlabel("start", fontsize=text_size)
+    ax0.set_ylabel(r"$\tau{100\%}$", fontsize=text_size)
+    ax1.set_xlabel("start", fontsize=text_size)
+    ax1.set_ylabel(r"$\tau{50\%}$", fontsize=text_size)
+    ax2.set_xlabel("start", fontsize=text_size)
+    ax2.set_ylabel(r"$\tau{S}$", fontsize=text_size)
+
+    ax0.set_title(subplot0_title, fontsize=subplot_title_size)
+    ax1.set_title(subplot1_title, fontsize=subplot_title_size)
+    ax2.set_title(subplot2_title, fontsize=subplot_title_size)
+
+    return fig, ax0, ax1, ax2
     
-def set_up_fig(chrom):
+def set_up_trace_fig(chrom):
     """
     create the basic structure of the matplotlib figure
     returns the figure itself and the axes that are part of it
@@ -129,9 +158,7 @@ def set_up_fig(chrom):
     ax2=fig.add_subplot(gs[2, 1], sharey=ax1) # add subplot for m value normal distribution
     ax3=fig.add_subplot(gs[1, 0], sharex=ax1) # add subplot for interactions in the range of the m plot
     ax0.set_xlim(0, chrom.cycle)
-    ax1.set_xlim([0, chrom.first_95_m*2])
-
-    init_plot_style_settings()
+    ax1.set_xlim([0, chrom.tS*2])
     
     global A_alpha
     A_alpha   = max(1/chrom.genesA, 0.05)
@@ -144,21 +171,29 @@ def set_up_fig(chrom):
     plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
     subplot0_title=r"number of unique interactions after $n$ inversion cycles"
     subplot1_title=r"$m$ after $n$ inversion cycles"
-    subplot3_title=r"number of unique interactions after $n$ inversion cycles (until cycle {})".format(chrom.first_95_m*2)
+    subplot3_title=r"number of unique interactions after $n$ inversion cycles (until cycle {})".format(chrom.tS*2)
     
     ax0.set_xlabel("inversion cycle", fontsize=text_size)
     ax0.set_ylabel("unique interactions", fontsize=text_size)
-    ax3.set_xlabel("inversion cycle", fontsize=text_size)
-    ax3.set_ylabel("unique interactions", fontsize=text_size)
     ax1.set_xlabel("inversion cycle", fontsize=text_size)
     ax1.set_ylabel(r"$m$", fontsize=text_size)
+    ax3.set_xlabel("inversion cycle", fontsize=text_size)
+    ax3.set_ylabel("unique interactions", fontsize=text_size)
     fig.suptitle(plot_title, fontsize=plot_title_size)
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
     #ax3.set_title(subplot3_title, fontsize=subplot_title_size)
 
     return fig, ax0, ax1, ax2, ax3
-    
+
+def plot_dotplot(chrom, ax, x, y):
+    """
+    plot a dotplot between the original gene list and the final ones
+    """
+    x_indices=[x.index(gene) for gene in x]
+    y_indices=[y.index(gene) for gene in x]
+    ax.scatter(x_indices, y_indices, lw=setlw*2, color='blue')
+
 def plot_trace(chrom, trace, ax, lim, color, alpha):
     """
     plot trace on ax from 0 to lim
@@ -199,18 +234,18 @@ def plot_m(chrom, ax_m, ax_norm):
     upper_bound=chrom.m_mu+1.96*chrom.m_sigma
     lower_bound=chrom.m_mu-1.96*chrom.m_sigma
         
-    ax_m.plot(cycles[:chrom.first_95_m*2+1], m_values[:chrom.first_95_m*2+1], lw=setlw*2, color='blue', label=r"$m$")
+    ax_m.plot(cycles[:chrom.tS*2+1], m_values[:chrom.tS*2+1], lw=setlw*2, color='blue', label=r"$m$")
     
     # plot 95 percentile of m value normal distribution
-    crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of t50)".format(cross=chrom.first_95_m, perc=chrom.first_95_m/chrom.t50*100)
+    crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of t50)".format(cross=chrom.tS, perc=chrom.tS/chrom.t50*100)
     norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=25)
     ax_m.axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
     ax_m.axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
-    ax_m.text(y=upper_bound, x=chrom.first_95_m*2, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
-    ax_m.text(y=lower_bound, x=chrom.first_95_m*2, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
+    ax_m.text(y=upper_bound, x=chrom.tS*2, ha='right', va='bottom', s=r"$\mu+1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
+    ax_m.text(y=lower_bound, x=chrom.tS*2, ha='right', va='top', s=r"$\mu-1.96\cdot\sigma$", bbox=bbox, fontsize=text_size)
     ax_m.fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
-    ax_m.axvline(x=chrom.first_95_m, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
-    ax_m.text(x=chrom.first_95_m, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox, fontsize=text_size)
+    ax_m.axvline(x=chrom.tS, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
+    ax_m.text(x=chrom.tS, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox, fontsize=text_size)
     
     # plot normal distribution next to m plot
     ax_norm.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
@@ -243,19 +278,18 @@ def save_fig(output_dir, output_name, yaml=False):
         with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
             yaml.dump(chrom.trace, f)
 
-def plot_results(chrom, output_dir, yaml=False):
+def plot_results(chrom, output_dir, do_yaml=False):
     """
     plot the results of a simulated chromosome
-    """
-    # Use matplotlib to plot each key's list as a line.
-    # The index of the list is the x-axis, the value is the y-axis.
+    """    
+    init_plot_style_settings()
 
     output_name=get_output_name(chrom)
     
-    m_lim=(chrom.first_95_m*2)#+chrom.sample_rate)//chrom.sample_rate
+    m_lim=(chrom.tS*2)#+chrom.sample_rate)//chrom.sample_rate
     lim=(chrom.cycle)#+chrom.sample_rate)//chrom.sample_rate
     
-    fig, ax0, ax1, ax2, ax3=set_up_fig(chrom)
+    fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
 
     # plot traces
     plot_trace(chrom, chrom.trace, ax0, lim, 'black', all_alpha)
@@ -273,7 +307,20 @@ def plot_results(chrom, output_dir, yaml=False):
     ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
     ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
 
-    save_fig(output_dir, output_name, yaml)
+    save_fig(output_dir, output_name+"_trace", do_yaml)
+
+    x=chrom.original_gene_list
+    y0=chrom.gene_list
+    y1=chrom.t50_gene_list
+    y2=chrom.tS_gene_list
+    
+    fig, ax0, ax1, ax2=set_up_dot_fig(chrom)
+
+    plot_dotplot(chrom, ax0, x, y0)
+    plot_dotplot(chrom, ax1, x, y1)
+    #plot_dotplot(chrom, ax2, x, y2)
+
+    save_fig(output_dir, output_name+"_dotplots")
 
 def log(chrom, output_dir, elapsed='N/A'):
     """
@@ -292,7 +339,7 @@ def log(chrom, output_dir, elapsed='N/A'):
     
     log_header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
     log_format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95};{sig:.3f};{mu:.3f};{dt}\n'
-    log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.first_95_m, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
+    log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.tS, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
 
     with open(log_dir+log_file, mode) as f:
         if new_log_file:
