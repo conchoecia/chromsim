@@ -7,6 +7,7 @@ import argparse as ap
 import yaml
 import glob
 from datetime import datetime as dt
+import pandas as pd
 
 class FloatRange(abc.Container):
 
@@ -161,9 +162,9 @@ def set_up_trace_fig(chrom):
     ax1.set_xlim([0, chrom.tS*2])
     
     global A_alpha
-    A_alpha   = max(1/chrom.genesA, 0.05)
+    A_alpha   = max(1/chrom.genesA, 0.1)
     global B_alpha
-    B_alpha   = max(1/chrom.genesB, 0.05)
+    B_alpha   = max(1/chrom.genesB, 0.1)
     global all_alpha
     all_alpha = max(1/(chrom.genesA + chrom.genesB), 0.05)
     
@@ -198,7 +199,7 @@ def plot_trace(chrom, trace, ax, lim, color, alpha):
     """
     plot trace on ax from 0 to lim
     """
-    xtot, ytot=[], []
+    all=[]
     for k in trace:
         x, y= [], []
         for tup in trace[k]:
@@ -206,13 +207,21 @@ def plot_trace(chrom, trace, ax, lim, color, alpha):
                 break
             x.append(tup[0])
             y.append(tup[1])
-            xtot.append(tup[0])
-            ytot.append(tup[1])
+            all.append((tup[0], tup[1]))
         ax.plot(x, y, color=color, lw = setlw, alpha=alpha)
-    #ymed=chrom._median_of_trace(trace)
-    xtot=sorted(xtot)
-    ytot=sorted(ytot)
-    ax.plot(xtot, ytot, color=color, lw = setlw*10, alpha=0.75)
+    all=sorted(all)
+
+    # calculate the moving average of the combined list
+    df = pd.DataFrame(all, columns =['cycle', 'interactions'])
+    new_all=df.rolling(len(all)//20).mean()
+
+    # add the last elements of the original list to make sure the line goes all the way to the end
+    x=new_all['cycle'].tolist()
+    x.append(all[-1][0])
+    y=new_all['interactions'].tolist()
+    y.append(all[-1][1])
+    
+    ax.plot(x, y, color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
     """
