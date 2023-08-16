@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0):
+    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0, cuts=[]):
         # length is the chromosome length
         # The intention is to eventually model varying regions of gene density,
         #    so don't delete this yet.
@@ -47,11 +47,12 @@ class Chrom():
         self.cycle = 0
         self.init_trace()
         
-        # [PERFORMANCE] Parallelizing these two functions could save some time.
         self.update_seen(0, len(self.gene_list)-1)
         self.tS=-1
         self.m_sigma=-1
         self.m_mu=-1
+        
+        self.cuts=cuts if cuts else []
     
     def __str__(self):
         format_string="cycle: {cycle:10d}; last inversion: {start} {istart:5d} {inverted} {iend:<5d} {end}; m: {m:1.3f}"
@@ -78,9 +79,10 @@ class Chrom():
             #    if k in self.trace_BtoA:
             #        self.trace_BtoA[k].append((self.cycle, self.trace_BtoA[k][-1]))
     
-    def simulation_cycle(self, iterations = 0):
+    def simulation_cycle(self, iterations=-1, rerun=False):
         """
         This function runs the simulation for a given number of iterations, or until done.
+        - iterations: the number of iterations to run (ignore if < 0)
         """
         # raise an error if we don't know how to run this method
         if iterations == 0 and self.until_converged == False:
@@ -171,17 +173,23 @@ class Chrom():
         # Start at one and end at len-1 to not destroy telomeres
         i0, i1=0, 0
         bps_valid=False
+
         while not bps_valid:
             i0, i1=self.pick_breakpoints()
             bps_valid=self.validate_breakpoints(i0, i1)
+
         sortedi = sorted([i0, i1]) 
         i0 = sortedi[0]
         i1 = sortedi[1]
-        self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
+        
+        self.cuts.append((i0, i1))
+
         self.transpose_genes()
-        # [PERFORMANCE] Maybe parallelizing update_seen() and calculate_m() here would save some time.
         self.update_cycle(i0, i1)
 
+    def invert(self, i0, i1):
+        self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
+        
     def get_window(self, i):
         return max(i-self.window_size, 0), min(i+self.window_size, len(self.gene_list)-1)
         
