@@ -8,6 +8,7 @@ import yaml
 import glob
 from datetime import datetime as dt
 import pandas as pd
+from chromosome import Chrom
 
 class FloatRange(abc.Container):
 
@@ -129,16 +130,16 @@ def set_up_dot_fig(chrom):
     ax2=fig.add_subplot(gs[0, 2])
 
     plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
-    subplot0_title=r"dotplot start vs. $\tau{100\%}$ of simulation"
-    subplot1_title=r"dotplot start vs. $\tau_{50\%}$ of simulation"
-    subplot2_title=r"dotplot start vs. $\tau_{S}$ of simulation"
+    subplot0_title=r"$\tau_0$ vs. $\tau_{100\%}$"
+    subplot1_title=r"$\tau_0$ vs. $\tau_{50\%}$"
+    subplot2_title=r"$\tau_0$ vs. $\tau_{S}$"
 
-    ax0.set_xlabel("start", fontsize=text_size)
-    ax0.set_ylabel(r"$\tau{100\%}$", fontsize=text_size)
-    ax1.set_xlabel("start", fontsize=text_size)
-    ax1.set_ylabel(r"$\tau{50\%}$", fontsize=text_size)
-    ax2.set_xlabel("start", fontsize=text_size)
-    ax2.set_ylabel(r"$\tau{S}$", fontsize=text_size)
+    ax0.set_xlabel(r"$\tau_0$", fontsize=text_size)
+    ax0.set_ylabel(r"$\tau_{100\%}$", fontsize=text_size)
+    ax1.set_xlabel(r"$\tau_0$", fontsize=text_size)
+    ax1.set_ylabel(r"$\tau_{50\%}$", fontsize=text_size)
+    ax2.set_xlabel(r"$\tau_0$", fontsize=text_size)
+    ax2.set_ylabel(r"$\tau_S$", fontsize=text_size)
 
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
@@ -189,7 +190,7 @@ def set_up_trace_fig(chrom):
 
 def plot_dotplot(chrom, ax, x, y):
     """
-    plot a dotplot between the original gene list and the final ones
+    plot a dotplot between two gene lists
     """
     x_indices=[x.index(gene) for gene in x]
     y_indices=[y.index(gene) for gene in x]
@@ -321,13 +322,16 @@ def plot_results(chrom, output_dir, do_yaml=False):
     x=chrom.original_gene_list
     y0=chrom.gene_list
     y1=chrom.t50_gene_list
-    y2=chrom.tS_gene_list
+
+    ts_chrom=Chrom(chrom.length, chrom.genesA, chrom.genesB, chrom.level_of_convergence, chrom.window_size, chrom.until_converged, chrom.translocations_per_cycle, chrom.cuts)
+    ts_chrom.simulation_cycle(iterations=chrom.tS, show_output=False)
+    y2=ts_chrom.gene_list
     
     fig, ax0, ax1, ax2=set_up_dot_fig(chrom)
 
     plot_dotplot(chrom, ax0, x, y0)
     plot_dotplot(chrom, ax1, x, y1)
-    #plot_dotplot(chrom, ax2, x, y2)
+    plot_dotplot(chrom, ax2, x, y2)
 
     save_fig(output_dir, output_name+"_dotplots")
 

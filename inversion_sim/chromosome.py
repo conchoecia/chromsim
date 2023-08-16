@@ -7,13 +7,13 @@ import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, gene_quantityA, gene_quantityB, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0, cuts=[]):
+    def __init__(self, length, Asize, Bsize, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0, cuts=[]):
         # length is the chromosome length
         # The intention is to eventually model varying regions of gene density,
         #    so don't delete this yet.
-        self.length = length
-        self.genesA = gene_quantityA
-        self.genesB = gene_quantityB
+        self.length=length
+        self.genesA=Asize
+        self.genesB=Bsize
         self.size=self.genesA+self.genesB
         self.m_const=2*self.genesA*self.genesB/(self.genesA+self.genesB-1)
 
@@ -51,7 +51,8 @@ class Chrom():
         self.tS=-1
         self.m_sigma=-1
         self.m_mu=-1
-        
+
+        # if a non-empty list of cuts is passed, these cuts will be used over randomly generated ones
         self.cuts=cuts if cuts else []
     
     def __str__(self):
@@ -79,7 +80,7 @@ class Chrom():
             #    if k in self.trace_BtoA:
             #        self.trace_BtoA[k].append((self.cycle, self.trace_BtoA[k][-1]))
     
-    def simulation_cycle(self, iterations=-1, rerun=False):
+    def simulation_cycle(self, iterations=-1, show_output=True):
         """
         This function runs the simulation for a given number of iterations, or until done.
         - iterations: the number of iterations to run (ignore if < 0)
@@ -87,23 +88,7 @@ class Chrom():
         # raise an error if we don't know how to run this method
         if iterations == 0 and self.until_converged == False:
             raise ValueError("Please specify either iterations or until_converged.")
-        if self.until_converged:
-            converging_at=self.calculate_convergence()
-            AB_have_converged=False
-            while len(self.seen)/converging_at < self.level_of_convergence: 
-                self.shuffle()
-
-                if self.t50 < 0 and len(self.seen) >= converging_at/2:
-                    self.t50=self.cycle
-                    self.t50_gene_list=self.gene_list.copy()
-                    print("reached t50 at "+str(self.t50))
-                if self.t50 >= 0 and not AB_have_converged:
-                    AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
-                    if AB_have_converged:
-                        self.AB_convergence=self.cycle
-                        print("A-B/B-A converged at "+str(self.AB_convergence))
-            print("converged at "+str(self.cycle))
-        else:
+        if iterations >= 0:
             # run the simulation for the specified number of iterations
             for i in range(iterations):
                 # make a progress bar that stays on the same line that prints every 100 cycles
@@ -111,10 +96,36 @@ class Chrom():
                     # use a carriage return to stay on the same line
                     # use format string to make the number occupy 10 spaces.
                     # separate with a space character, then plot the percentage.
-                    print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
+                    if show_output:
+                        print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
                 self.shuffle()
-            print("{cycle:15d}  100.00%".format(cycle=i+1))
-
+            if show_output:
+                print("{cycle:15d}  100.00%".format(cycle=i+1))
+        else:
+            converging_at=self.calculate_convergence()
+            AB_have_converged=False
+            while len(self.seen)/converging_at < self.level_of_convergence:
+                if self.cycle % 100 == 0:
+                    # use a carriage return to stay on the same line
+                    # use format string to make the number occupy 10 spaces.
+                    # separate with a space character, then plot the percentage.
+                    if show_output:
+                        print("\r{cycle:15d} {progress:.2f}% converged ".format(Asize=self.genesA, Bsize=self.genesB, cycle=self.cycle, progress=(len(self.seen)/converging_at)*100), end="")
+                self.shuffle()
+                
+                if self.t50 < 0 and len(self.seen) >= converging_at/2:
+                    self.t50=self.cycle
+                    self.t50_gene_list=self.gene_list.copy()
+                    #if show_output:
+                    ##   print("reached t50 at "+str(self.t50))
+                if self.t50 >= 0 and not AB_have_converged:
+                    AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
+                    if AB_have_converged:
+                        self.AB_convergence=self.cycle
+                        #if show_output:
+                        #    print("A-B/B-A converged at "+str(self.AB_convergence))
+            if show_output:
+                print("{cycle:15d}  {loc:.2f}% converged".format(cycle=self.cycle, loc=self.level_of_convergence*100))
         # calculate all the values        
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
@@ -144,18 +155,21 @@ class Chrom():
             conv+=i
         return conv-1
 
-    def pick_breakpoints(self):
+    def pick_cut(self):
+        # this will result in an endless loop if there are cuts in the list the do not conform with the rules of validate_cut(), so that needs to be dealt with at some point
+        if self.cycle < len(self.cuts):
+            return self.cuts[self.cycle]
         i0 = random.randint(1, len(self.gene_list)-1)
         i1 = random.randint(1, len(self.gene_list)-1)
-        return i0, i1
+        return (i0, i1)
 
-    def validate_breakpoints(self, i0, i1):
+    def validate_cut(self, cut):
         """
         check whether the two breakpoints chosen should be rejected or not
         """
         return True # disabled right now
         import random as r
-        distance=abs(i1-i0)
+        distance=abs(cut[1]-cut[0])
         if distance == 0:
             return False
         cutoff=1/distance
@@ -163,6 +177,8 @@ class Chrom():
         return rand <= cutoff
 
     def transpose_genes(self):
+        if self.translocations_per_cycle > 0:
+            raise NotImplementedError()
         for i in range(0, self.translocations_per_cycle):
             i0, i1=self.pick_breakpoints()
             gene=self.gene_list.pop(i0)
@@ -171,18 +187,20 @@ class Chrom():
     def shuffle(self):
         # Randomly pick two indices in the list.
         # Start at one and end at len-1 to not destroy telomeres
-        i0, i1=0, 0
-        bps_valid=False
+        cut=(0, 0)
+        cut_valid=False
 
-        while not bps_valid:
-            i0, i1=self.pick_breakpoints()
-            bps_valid=self.validate_breakpoints(i0, i1)
+        while not cut_valid:
+            cut=self.pick_cut()
+            cut_valid=self.validate_cut(cut)
 
-        sortedi = sorted([i0, i1]) 
-        i0 = sortedi[0]
-        i1 = sortedi[1]
+        sorted_cut = sorted(cut) 
+        i0 = sorted_cut[0]
+        i1 = sorted_cut[1]
+
+        self.invert(i0, i1)
         
-        self.cuts.append((i0, i1))
+        self.cuts.append(sorted_cut)
 
         self.transpose_genes()
         self.update_cycle(i0, i1)
