@@ -526,8 +526,8 @@ def create_parser():
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
     parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (default: 0)")
-    # flag simulation  arguments
-    parser.add_argument('-C', '--converge', action='store_true', default=False, help="specify whether the simulation should run until convergence (default: False)")
+    # flag simulation arguments
+    #parser.add_argument('-C', '--converge', action='store_true', default=False, help="specify whether the simulation should run until convergence (default: False)")
     parser.add_argument('-P', '--plot-curves', action='store_true', default=False, help="tell the simulation to plot the curves in the end (default: False)")
     # flag simulation-free arguments
     parser.add_argument('-M', '--metalog', action='store_true', help="collect averages from log files and store them in metalog.csv (not running a simulation)")

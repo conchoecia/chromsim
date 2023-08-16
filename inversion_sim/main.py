@@ -36,7 +36,8 @@ def main():
         raise parser.error("window-size has to be between 1 and the chromosome size (Asize+Bsize)")
 
     loc=args['level_of_convergence']
-    converge=args['converge']
+    #converge=args['converge']
+    converge=True
     cycles=args['cycle_number']
     if not converge and cycles <= 0:
         raise parser.error("please specify a cycle number >0 or use --converge")
