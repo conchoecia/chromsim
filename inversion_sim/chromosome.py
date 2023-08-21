@@ -1,173 +1,173 @@
 """
-This program calculates the time it takes for any gene to interact with another
-after a fusion-with mixing event.
+This file contains the class for a chromosome with the ability to simulate inversions.
 """
 
 import random
 import numpy as np
 
 class Chrom():
-    def __init__(self, length, Asize, Bsize, level_of_convergence=1, window_size=1, until_converged=False, translocations_per_cycle=0, cuts=[]):
-        # length is the chromosome length
-        # The intention is to eventually model varying regions of gene density,
-        #    so don't delete this yet.
+    def __init__(self, length, Asize, Bsize, level_of_convergence=1, window_size=1, translocations_per_cycle=0, cuts=[]):
+
+        # set parameters
         self.length=length
         self.genesA=Asize
         self.genesB=Bsize
         self.size=self.genesA+self.genesB
+        self.level_of_convergence=level_of_convergence
+        self.translocations_per_cycle=translocations_per_cycle
+        self.window_size=window_size
+        self.inversion_cuts=cuts if cuts else []
+        
+        # set constants based on parameters
         self.m_const=2*self.genesA*self.genesB/(self.genesA+self.genesB-1)
+        self.converging_at=self._calculate_convergence()
 
+        # set the cycle number to 0
+        self.cycle=0
+
+        # initialize gene list
         self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
         self.original_gene_list=self.gene_list.copy()
         self.t50_gene_list=None
-        self.tS_gene_list=None
-        # seen is a list of genes that have already interacted with each other, value is cycle
-        self.seen = {}
-        self.window_size=window_size
+
+        # initialize the points of (half-)convergence and entropy
         self.t50=-1
-        self.AB_convergence=-1
-        self.converged_AtoB=0
-        self.converged_BtoA=0
-        # level_of_convergence specififies the fraction of possible gene interactions have
-        #   to have been seen before ending the simulation if until_converged is set to True.
-        # The value ranges from 0 to 1.
-        self.level_of_convergence=level_of_convergence
-        self.until_converged=until_converged
-        self.translocations_per_cycle=translocations_per_cycle
-
-        # set the rate of data sampling (each cycle for small chromosomes, all the way to 1% of cycles for large ones)
-        self.sample_frequency = 1 if self.size <= 50 else 0.5 if self.size <= 100 else 0.1 if self.size <= 500 else 0.01
-        self.sample_rate = int( 1 / self.sample_frequency)
-
-        # this cumulatively tracks how many new interactions were added at each cycle
-        self.trace      = {k:[] for k in self.gene_list}
-        self.trace_AtoB = {k:[] for k in self.gene_list if k.startswith("A")}
-        self.trace_BtoA = {k:[] for k in self.gene_list if k.startswith("B")}
-        self.trace_m={0:0}
-        self.cycle = 0
-        self.init_trace()
-        
-        self.update_seen(0, len(self.gene_list)-1)
+        self.t100=-1
+        self.AB_convergence=-1 # t100 but for inter-group convergence only (don't care about intra-group convergence)
         self.tS=-1
         self.m_sigma=-1
         self.m_mu=-1
+        
+        # initialize the number of converged genes in both groups (i.e. the number of genes in group A that has seen all group B genes, and vice versa
+        self.converged_AtoB=0 # once these two numbers reach Asize and Bsize, respectively,
+        self.converged_BtoA=0 # AB_convergence is achieved
+        
+        # initialize the traces that cumulatively track how many new interactions are added after each cycle
+        self.trace      = {k:[(0, 0)] for k in self.gene_list}
+        self.trace_AtoB = {k:[(0, 0)] for k in self.gene_list if k.startswith("A")}
+        self.trace_BtoA = {k:[(0, 0)] for k in self.gene_list if k.startswith("B")}
 
-        # if a non-empty list of cuts is passed, these cuts will be used over randomly generated ones
-        self.cuts=cuts if cuts else []
-    
-    def __str__(self):
-        format_string="cycle: {cycle:10d}; last inversion: {start} {istart:5d} {inverted} {iend:<5d} {end}; m: {m:1.3f}"
-        AB_string=self.get_AB_string()
-        i0=self.last_i0
-        i1=self.last_i1
-        m=self.trace_m[self.cycle]
-        ret=format_string.format(cycle=self.cycle, start=AB_string[0:i0], istart=i0, inverted=AB_string[i0:i1], iend=i1-1, end=AB_string[i1:len(AB_string)], m=m)
-        return ret
+        # initialize the entropy value trace
+        self.trace_m={0:0}
 
-    def init_trace(self):
-        # increment the trace structure so we can modify
-        for k in self.trace: # self.trace:
-            #if len(self.trace[k]) == 0:
-            self.trace[k].append((self.cycle, 0))
-            if k in self.trace_AtoB:
-                self.trace_AtoB[k].append((self.cycle, 0))
-            if k in self.trace_BtoA:
-                self.trace_BtoA[k].append((self.cycle, 0))
-            #elif self.cycle % self.sample_rate == 0:
-            #    self.trace[k].append((self.cycle, self.trace[k][-1]))
-            #    if k in self.trace_AtoB:
-            #        self.trace_AtoB[k].append((self.cycle, self.trace_AtoB[k][-1]))
-            #    if k in self.trace_BtoA:
-            #        self.trace_BtoA[k].append((self.cycle, self.trace_BtoA[k][-1]))
-    
-    def simulation_cycle(self, iterations=-1, show_output=True):
+        # initialize dictionary of new seen interactions
+        self.seen = {} # seen is a list of genes that have already interacted with each other, value is the cycle of the first interaction between the two genes that are the key
+        self._update_seen(0, len(self.gene_list)-1)
+
+    def _print_progress(self, progress, s=""):
         """
-        This function runs the simulation for a given number of iterations, or until done.
-        - iterations: the number of iterations to run (ignore if < 0)
+        print a line showing the progess of the simulation
+
+        s is appended to the end of the string
         """
-        # raise an error if we don't know how to run this method
-        if iterations == 0 and self.until_converged == False:
-            raise ValueError("Please specify either iterations or until_converged.")
-        if iterations >= 0:
+        print("\rcycle {cycle:15d} {progress:.2f}%".format(cycle=self.cycle, progress=progress), end="")
+        
+    def run(self, n=-1, show_output=True):
+        """
+        run the simulation for n iterations, or until convergence if n < 0
+
+        print progress report to the console if show_output is True
+        """
+
+        # run n iterations if n >= 0
+        if n >= 0:
             # run the simulation for the specified number of iterations
-            for i in range(iterations):
-                # make a progress bar that stays on the same line that prints every 100 cycles
-                if i % 100 == 0:
-                    # use a carriage return to stay on the same line
-                    # use format string to make the number occupy 10 spaces.
-                    # separate with a space character, then plot the percentage.
-                    if show_output:
-                        print("\r{cycle:15d} {progress:.2f}%  ".format(Asize=self.genesA, Bsize=self.genesB, cycle=i, progress=(i/iterations)*100), end="")
-                self.shuffle()
+            while self.cycle < n:
+                if show_output and self.cycle%100 == 0:
+                    self._print_progress(self.cycle/n*100)
+                self._shuffle()
             if show_output:
-                print("{cycle:15d}  100.00%".format(cycle=i+1))
+                # show the progress bar with 100% completion
+                self._print_progress(100)
+        # run until convergence otherwise
         else:
-            converging_at=self.calculate_convergence()
             AB_have_converged=False
-            while len(self.seen)/converging_at < self.level_of_convergence:
-                if self.cycle % 100 == 0:
-                    # use a carriage return to stay on the same line
-                    # use format string to make the number occupy 10 spaces.
-                    # separate with a space character, then plot the percentage.
-                    if show_output:
-                        print("\r{cycle:15d} {progress:.2f}% converged ".format(Asize=self.genesA, Bsize=self.genesB, cycle=self.cycle, progress=(len(self.seen)/converging_at)*100), end="")
-                self.shuffle()
+            while len(self.seen)/self.converging_at < self.level_of_convergence:
+                if show_output and self.cycle%100 == 0:
+                    self._print_progress(len(self.seen)/self.converging_at*100)
+                self._shuffle()
                 
-                if self.t50 < 0 and len(self.seen) >= converging_at/2:
+                if self.t50 < 0 and len(self.seen) >= self.converging_at/2:
                     self.t50=self.cycle
                     self.t50_gene_list=self.gene_list.copy()
-                    #if show_output:
-                    ##   print("reached t50 at "+str(self.t50))
-                if self.t50 >= 0 and not AB_have_converged:
-                    AB_have_converged=self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB
-                    if AB_have_converged:
+                if self.t50 >= 0 and self.AB_convergence < 0:
+                    if self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB:
                         self.AB_convergence=self.cycle
-                        #if show_output:
-                        #    print("A-B/B-A converged at "+str(self.AB_convergence))
             if show_output:
-                print("{cycle:15d}  {loc:.2f}% converged".format(cycle=self.cycle, loc=self.level_of_convergence*100))
-        # calculate all the values        
+                # show the progress bar with level_of_convergence completion
+                self._print_progress(self.level_of_convergence*100)
+
+        self._calculate()
+        
+    def _calculate(self):
+        """
+        calculate all the values based on the simulation results       
+        """
+
+        # get the cycles and m_values as lists
         cycles=[x for x in self.trace_m.keys()]
         m_values=[y for y in self.trace_m.values()]
+
+        # set the burn-in to 25% of the data
         burn_in=0.25
         start_norm_at=int((self.cycle+1)*burn_in)//1
         burnt_m_values=np.array(m_values[start_norm_at:])
+
+        # calculate μ and σ
         mu=np.mean(burnt_m_values)
         var=np.var(burnt_m_values)
-        sigma=var**0.5
+        sigma=var**0.5 # σ is the square root of the variance
         self.m_sigma=sigma
         self.m_mu=mu
+
+        # set the bounds of the 5th and 95th percentiles (values in this range are considered entropic)
         upper_bound=mu+1.96*sigma
         lower_bound=mu-1.96*sigma
-        crossed_lower_bound_at=0
+
+        # find the first entropic value
+        tS=0
         for k in self.trace_m.items():
             if k[1] >= lower_bound:
-                crossed_lower_bound_at=k[0]
+                tS=k[0]
                 break
-        self.tS=crossed_lower_bound_at   
-
-    def calculate_convergence(self):
+        self.tS=tS   
+        
+    def _calculate_convergence(self):
         """
         calculates the number of possible unique gene interactions
         """
+
         conv=0
         for i in range(self.genesA+self.genesB):
             conv+=i
         return conv-1
 
-    def pick_cut(self):
-        # this will result in an endless loop if there are cuts in the list the do not conform with the rules of validate_cut(), so that needs to be dealt with at some point
-        if self.cycle < len(self.cuts):
-            return self.cuts[self.cycle]
-        i0 = random.randint(1, len(self.gene_list)-1)
-        i1 = random.randint(1, len(self.gene_list)-1)
-        return (i0, i1)
+    def _pick_cut(self, type):
+        """
+        return a tuple of indices that represent the breakpoints of the next inversion
 
-    def validate_cut(self, cut):
+        type specifies if the cut is for 'inversion' or 'translocation'
+        """
+
+        if self.cycle < len(self.inversion_cuts):
+            return self.inversion_cuts[self.cycle]
+
+        valid=False
+        while not valid:
+            cut=(random.randint(1, len(self.gene_list)-1), random.randint(1, len(self.gene_list)-1))
+            valid=self._validate_cut(cut, type)
+        return cut
+
+    def _validate_cut(self, cut, type):
         """
         check whether the two breakpoints chosen should be rejected or not
+        type specifies if the cut is for 'inversion' or 'translocation'
+
+        no rules are imposed currently, returns True
         """
-        return True # disabled right now
+        
+        return True
+    
         import random as r
         distance=abs(cut[1]-cut[0])
         if distance == 0:
@@ -176,140 +176,131 @@ class Chrom():
         rand=r.random()
         return rand <= cutoff
 
-    def transpose_genes(self):
-        if self.translocations_per_cycle > 0:
-            raise NotImplementedError()
-        for i in range(0, self.translocations_per_cycle):
-            i0, i1=self.pick_breakpoints()
+    def _transpose_genes(self):
+        """
+        translocate translocations_per_cycle genes within the gene list
+        """
+
+        for i in range(self.translocations_per_cycle):
+            i0, i1=self.pick_cut()
             gene=self.gene_list.pop(i0)
             self.gene_list.insert(i1, gene)
             
-    def shuffle(self):
-        # Randomly pick two indices in the list.
-        # Start at one and end at len-1 to not destroy telomeres
-        cut=(0, 0)
-        cut_valid=False
+    def _shuffle(self):
+        """
+        invert chromosome and translocate genes
 
-        while not cut_valid:
-            cut=self.pick_cut()
-            cut_valid=self.validate_cut(cut)
+        translocations are not currently done, as they are not implemented with the new _update_cycle process
+        """
 
-        sorted_cut = sorted(cut) 
-        i0 = sorted_cut[0]
-        i1 = sorted_cut[1]
+        self._invert()
+        # self._transpose_genes()
+        self._update_cycle(self.inversion_cuts[-1])
 
-        self.invert(i0, i1)
+    def _invert(self):
+        """
+        pick cut and invert the chromosome
+        """
         
-        self.cuts.append(sorted_cut)
+        cut=sorted(self._pick_cut())
+        self.inversion_cuts.append(cut)
 
-        self.transpose_genes()
-        self.update_cycle(i0, i1)
-
-    def invert(self, i0, i1):
+        i0 = cut[0]
+        i1 = cut[1]
         self.gene_list[i0:i1] = self.gene_list[i0:i1][::-1]
         
-    def get_window(self, i):
+    def _get_window(self, i):
+        """
+        get the window around an index, based upon window_size
+        """
+
+        # the max and min operations make sure that there is no out-of-bounds action going on
         return max(i-self.window_size, 0), min(i+self.window_size, len(self.gene_list)-1)
         
-    def update_cycle(self, i0, i1):
+    def _update_cycle(self, cut):
         """
-        update only in the window around the break points
+        prepare and execute updates of seen and m (only in the window around the breakpoints of cut)
         """
+
+        i0 = cut[0]
+        i1 = cut[1]
+
+        # increment cycle
         self.cycle+=1
-        start, end=self.get_window(i0)
-        self.update_seen(start, end)
-        start, end=self.get_window(i1)
-        self.update_seen(start, end)
-        self.update_m(i0, i1)
+
+        # update seen around i0 and i1
+        start, end=self._get_window(i0)
+        self._update_seen(start, end)
+        start, end=self._get_window(i1)
+        self._update_seen(start, end)
+
+        # update m around i0 and i1
+        self._update_m(i0, i1)
         
-    def update_seen(self, start, end):
+    def _update_seen(self, start, end):
         """
-        update the seen graph
+        update the seen list and trace structures
         """
-        # go through all of the pairs in the list to update self.seen
-        # [PERFORMANCE] this should be doable without iterating over the entire list but just the window around the breakpoints, I think
-        for i in range(start, end):
-            for l in range(i+1, min(end+1, i+self.window_size+1)):
-                this_edge = tuple(sorted([self.gene_list[i], self.gene_list[l]]))
-                if this_edge not in self.seen:
-                    self.seen[this_edge] = self.cycle
-                    # update the trace structure
-                    for j in [0,1]:
-                        other = 1 if j == 0 else 0
-                        self.trace[this_edge[j]].append((self.cycle, self.trace[this_edge[j]][-1][1]+1))#[-1] += 1
-                        if this_edge[j].startswith("A") and this_edge[other].startswith("B"):
-                            self.trace_AtoB[this_edge[j]].append((self.cycle, self.trace_AtoB[this_edge[j]][-1][1]+1)) #.[-1] += 1
+
+        # iterate over all genes between start and end
+        for gene_index in range(start, end):
+            # iterate over all following genes to compare to the current one
+            for comparing_gene_index in range(gene_index+1, min(end+1, gene_index+self.window_size+1)):
+                # group the two genes in a tuple
+                pair=tuple(sorted([self.gene_list[gene_index], self.gene_list[comparing_gene_index]]))
+                # update data structures if the pairing is new
+                if pair not in self.seen:
+                    # udpate seen with the current cycle
+                    self.seen[pair]=self.cycle
+
+                    # update trace structure for both genes in the tuple
+                    for pair_index in [0,1]:
+                        other=1 if pair_index == 0 else 0
+
+                        # update the current gene's trace with the current cycle and increment the last entry by 1 => (cycle, number_of_interactions)
+                        self.trace[pair[pair_index]].append((self.cycle, self.trace[pair[pair_index]][-1][1]+1))
+
+                        # update inter-group traces with a new interaction
+                        if pair[pair_index].startswith("A") and pair[other].startswith("B"):
+                            self.trace_AtoB[pair[pair_index]].append((self.cycle, self.trace_AtoB[pair[pair_index]][-1][1]+1)) #.[-1] += 1
                             # check whether the latest count of cross-group gene interactions for this gene is equal
                             #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
                             # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
                             #   cannot interact with the other telomere)
-                            if self.trace_AtoB[this_edge[j]][-1][1] == self.genesB-(1 if this_edge[j].split('.')[1] == '1' else 0):
+                            if self.trace_AtoB[pair[pair_index]][-1][1] == self.genesB-(1 if pair[pair_index].split('.')[1] == '1' else 0):
                                 self.converged_AtoB+=1
-                        if this_edge[j].startswith("B") and this_edge[other].startswith("A"):
-                            self.trace_BtoA[this_edge[j]].append((self.cycle, self.trace_BtoA[this_edge[j]][-1][1]+1)) #[-1] += 1
+                        if pair[pair_index].startswith("B") and pair[other].startswith("A"):
+                            self.trace_BtoA[pair[pair_index]].append((self.cycle, self.trace_BtoA[pair[pair_index]][-1][1]+1)) #[-1] += 1
                             # same as above, but for B-to-A
-                            if self.trace_BtoA[this_edge[j]][-1][1] == self.genesA-(1 if this_edge[j].split('.')[1] == str(self.genesB) else 0):
+                            if self.trace_BtoA[pair[pair_index]][-1][1] == self.genesA-(1 if pair[pair_index].split('.')[1] == str(self.genesB) else 0):
                                 self.converged_BtoA+=1
                 
-    def get_AB_string(self):
-        return ''.join([gene[0] for gene in self.gene_list])
+    def _update_m(self, i0, i1):
+        """
+        update m based on changes around the breakpoints
+        """
 
-    def update_m(self, i0, i1):
-        """
-        update m based on changes around the break points instead of iterating over the entire list
-        """
+        # get the previous m value
         old_m=self.trace_m[self.cycle-1]
+
+        # do nothing if the inversion was of length 0
         if i0==i1:
             self.trace_m[self.cycle]=old_m
             return
+
+        # calculate the number of transition before the last inversion
         old_transitions=old_m*self.m_const+1
+
+        # calculate the difference in the number of transtions between the old and new pairings
         old_pair0=(self.gene_list[i0-1], self.gene_list[i1-1])
         old_pair1=(self.gene_list[i0], self.gene_list[i1])
         new_pair0=(self.gene_list[i0-1:i0+1])
         new_pair1=(self.gene_list[i1-1:i1+1])
         delta_transitions=check_AB_pair(new_pair0[0], new_pair0[1])+check_AB_pair(new_pair1[0], new_pair1[1])-check_AB_pair(old_pair0[0], old_pair0[1])-check_AB_pair(old_pair1[0], old_pair1[1])
+
+        # caluculate the new number of transitions
         new_transitions=old_transitions+delta_transitions
+
+        # calculate the new m value and append to the data structure
         new_m=(new_transitions-1)/self.m_const
         self.trace_m[self.cycle]=new_m
-
-    def calculate_m(self):
-        """
-        [OBSOLETE] (I think)
-        calculate m of the current gene sequence
-        """
-        raise NotImplementedError()
-        # [PERFORMANCE] This looks like it runs a lot of loops in the background. Maybe we could save some runtime by running one loop
-        #   and doing the actions manually?
-        sequence=self.get_AB_string()
-        substrings = [sequence[i:i+2] for i in range(len(sequence)-1)]
-        A=self.genesA #= sequence.count('A') # These two lines seem reduntant, since we have the A and B counts stored in the chromosome.
-        B=self.genesB # = sequence.count('B')
-        AB=sequence.count('AB') #= substrings.count('AB')
-        BA=sequence.count('BA') #= substrings.count('BA')
-        m = (AB+BA-1)/self.m_const #((2* A * B)/(A+B) - 1)
-        self.trace_m[self.cycle]=m
-    
-    def _median(self, lst):
-        sortedLst = sorted(lst)
-        lstLen = len(lst)
-        index = (lstLen - 1) // 2
-       
-        if (lstLen % 2):
-            return sortedLst[index]
-        else:
-            return (sortedLst[index] + sortedLst[index + 1])/2.0
-    
-    def _median_of_trace(self, trace):
-        """
-        Gets the median value of the supplied traces.
-        """
-        # get a random key of self.trace
-        # This is not a random key, it is always the first (i.e. A.1 or B.1).
-        k = list(trace.keys())[0]
-        # calculate the median of all the traces at each sampling point
-        return [self._median([trace[j][i][1] for j in trace]) for i in range(len(trace[k]))]
-
-# static functions
-def check_AB_pair(AB0, AB1):
-    #print(AB0, AB1)
-    return 0 if AB0[0] == AB1[0] else 1

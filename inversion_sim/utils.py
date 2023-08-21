@@ -1,3 +1,7 @@
+"""
+This file contains various utility functions for the program, like plotting and logging.
+"""
+
 import os
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -9,6 +13,8 @@ import glob
 from datetime import datetime as dt
 import pandas as pd
 from chromosome import Chrom
+
+csv_separator='\t'
 
 class FloatRange(abc.Container):
 
@@ -31,70 +37,12 @@ class FloatRange(abc.Container):
             raise StopIteration
         self.n+=self.step
         return self.n-self.step
-
-def convert_dt(dt):
-    """
-    converts a sting of the form 'mm:ss' to seconds
-    """
-    mins, secs=dt.split(':')
-    return 60*int(mins)+int(secs)
-
-def read_log_file(path, filename, cols=[]):
-    """
-    read a log file and return the desired columns (all if col is [])
-    """
-    path+='log/'
-    input_file=filename+'.csv'
-
-    if not os.path.exists(path+input_file):
-        print(path+input_file)
-        print('log file does not exist')
-        return
-
-    data=None
-    
-    with open(path+input_file) as f:
-        lines=[line.rstrip().split(';') for line in f.readlines()]
-        header=lines[0]
-        if cols == []:
-            cols=header
-            
-        indices=[header.index(col) for col in cols]
-        data=[[line[i] for i in indices] for line in lines[1:]]
-
-    return data
-
-#def read_metalog_file(path, cols=[]):
-#    """
-#    read the metalog file and return the desired columns (all if col is [])
-#    """
-#    path+='log/'
-#    input_file='metalog.csv'
-#
-#    if not os.path.exists(path+input_file):
-#        print(path+input_file)
-#        print('metalog file does not exist')
-#        return
-
-    
-
-def plot_runtime(path, filename):
-    """
-    plot the runtime as a function of chromosome size from a log file
-    probably obsolete now, will keep just in case
-    """
-    # might still be useful, but I got to change the code since the log files are named differently now
-    output_file='runtime.png'
-    raw_data=read_log_file(path, filename, ['|A|', '|B|', 'average_runtime'])
-    data=[[int(line[0])+int(line[1]), line[2]] for line in raw_data]
-    
-    plt.plot([x[0] for x in data], [runtime_to_int(x[1])/60 for x in data], 'o')
-    plt.xlabel("chromosome size (|A|+|B|)")
-    plt.ylabel("runtime (minutes)")
-    plt.savefig(path+output_file)
-    print('success')
     
 def init_plot_style_settings():
+    """
+    set the global values for text sizes, colors, etc. to be used in plots
+    """
+
     # figure styling
     plt.style.use('bmh')
 
@@ -118,21 +66,23 @@ def init_plot_style_settings():
     global text_size
     text_size=20    
 
-def set_up_dot_fig(chrom):
+def set_up_dot_fig(chrom, title):
     """
-    TODO
+    set up all the axes needed for the dotplots in a grid
     """
-    figsize=(35, 10)
+    
+    figsize=(40, 40)
     fig=plt.figure(figsize=figsize)
-    gs=fig.add_gridspec(1, 3)
+    gs=fig.add_gridspec(2, 2)
     ax0=fig.add_subplot(gs[0, 0])
     ax1=fig.add_subplot(gs[0, 1])
-    ax2=fig.add_subplot(gs[0, 2])
+    ax2=fig.add_subplot(gs[1, 0])
+    ax3=fig.add_subplot(gs[1, 1])
 
-    plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
     subplot0_title=r"$\tau_0$ vs. $\tau_{100\%}$"
     subplot1_title=r"$\tau_0$ vs. $\tau_{50\%}$"
-    subplot2_title=r"$\tau_0$ vs. $\tau_{S}$"
+    subplot2_title=r"$\tau_0$ vs. $\tau_S$"
+    subplot3_title=r"$\tau_S$ vs. $\tau_{50\%}$"
 
     ax0.set_xlabel(r"$\tau_0$", fontsize=text_size)
     ax0.set_ylabel(r"$\tau_{100\%}$", fontsize=text_size)
@@ -140,18 +90,22 @@ def set_up_dot_fig(chrom):
     ax1.set_ylabel(r"$\tau_{50\%}$", fontsize=text_size)
     ax2.set_xlabel(r"$\tau_0$", fontsize=text_size)
     ax2.set_ylabel(r"$\tau_S$", fontsize=text_size)
+    ax3.set_xlabel(r"$\tau_S$", fontsize=text_size)
+    ax3.set_ylabel(r"$\tau_{50\%}$", fontsize=text_size)
 
+    fig.suptitle(title, fontsize=plot_title_size)
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
     ax2.set_title(subplot2_title, fontsize=subplot_title_size)
+    ax3.set_title(subplot3_title, fontsize=subplot_title_size)
 
-    return fig, ax0, ax1, ax2
+    return fig, ax0, ax1, ax2, ax3
     
-def set_up_trace_fig(chrom):
+def set_up_trace_fig(chrom, title):
     """
-    create the basic structure of the matplotlib figure
-    returns the figure itself and the axes that are part of it
+    set up all the axes needed for the traces on a grid
     """
+
     figsize=(20, 25)
     fig=plt.figure(figsize=figsize)
     gs=fig.add_gridspec(3, 2, width_ratios=[3, 1])
@@ -170,36 +124,51 @@ def set_up_trace_fig(chrom):
     all_alpha = max(1/(chrom.genesA + chrom.genesB), 0.05)
     
     # set plot titles and axis labels
-    plot_title=r"$|A|={Asize}, |B|={Bsize}$, {cycles} inversion cycles".format(Asize=chrom.genesA, Bsize=chrom.genesB, cycles=chrom.cycle)
     subplot0_title=r"number of unique interactions after $n$ inversion cycles"
     subplot1_title=r"$m$ after $n$ inversion cycles"
-    subplot3_title=r"number of unique interactions after $n$ inversion cycles (until cycle {})".format(chrom.tS*2)
-    
+
     ax0.set_xlabel("inversion cycle", fontsize=text_size)
     ax0.set_ylabel("unique interactions", fontsize=text_size)
     ax1.set_xlabel("inversion cycle", fontsize=text_size)
     ax1.set_ylabel(r"$m$", fontsize=text_size)
     ax3.set_xlabel("inversion cycle", fontsize=text_size)
     ax3.set_ylabel("unique interactions", fontsize=text_size)
-    fig.suptitle(plot_title, fontsize=plot_title_size)
+
+    fig.suptitle(title, fontsize=plot_title_size)
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
-    #ax3.set_title(subplot3_title, fontsize=subplot_title_size)
-
+    
     return fig, ax0, ax1, ax2, ax3
 
 def plot_dotplot(chrom, ax, x, y):
     """
     plot a dotplot between two gene lists
     """
-    x_indices=[x.index(gene) for gene in x]
-    y_indices=[y.index(gene) for gene in x]
-    ax.scatter(x_indices, y_indices, lw=setlw*2, color='blue')
 
-def plot_trace(chrom, trace, ax, lim, color, alpha):
+    # get the indices of all genes in x in both lists
+    # segregated into the two gene groups to make them different color dots
+    xA_indices=[]
+    yA_indices=[]
+    xB_indices=[]
+    yB_indices=[]
+    for gene in x:
+        if gene.startswith('A'):
+            xA_indices.append(x.index(gene))
+            yA_indices.append(y.index(gene))
+        elif gene.startswith('B'):
+            xB_indices.append(x.index(gene))
+            yB_indices.append(y.index(gene))
+
+    ax.scatter(xA_indices, yA_indices, lw=setlw*2)
+    ax.scatter(xB_indices, yB_indices, lw=setlw*2)
+
+def plot_trace(chrom, trace, ax, lim, color='blue', alpha=0.5):
     """
-    plot trace on ax from 0 to lim
+    plot trace dictionary on the given axes in the interval [0, lim]
     """
+
+    # plot all the individual traces
+    # at the same time collect them into a single combined trace
     all=[]
     for k in trace:
         x, y= [], []
@@ -208,34 +177,45 @@ def plot_trace(chrom, trace, ax, lim, color, alpha):
                 break
             x.append(tup[0])
             y.append(tup[1])
-            all.append((tup[0], tup[1]))
+            all.append(tup)
         ax.plot(x, y, color=color, lw = setlw, alpha=alpha)
     all=sorted(all)
 
-    # calculate the moving average of the combined list
+    # calculate the moving average of the combined trace
     df = pd.DataFrame(all, columns =['cycle', 'interactions'])
-    new_all=df.rolling(len(all)//20).mean()
+    new_all=df.rolling(len(all)//10).mean()
 
     # add the last elements of the original list to make sure the line goes all the way to the end
     x=new_all['cycle'].tolist()
     x.append(all[-1][0])
     y=new_all['interactions'].tolist()
     y.append(all[-1][1])
-    
+
+    # plot the combined trace
     ax.plot(x, y, color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
     """
-    plot a horizontal line at x=t50 on ax
+    plot a horizontal line at x=t50 on the given axis
     """
+    
     t50_text=r"$\tau_{{50\%}}={t50}$" "\n" "$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100)
-    ax.text(x=chrom.t50, y=max(chrom._median_of_trace(chrom.trace))//10, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
+    ax.text(x=chrom.t50, y=1, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
     ax.axvline(x=chrom.t50, lw=setlw*5, color='black')
 
 def plot_m(chrom, ax_m, ax_norm):
     """
     plot the m value curve and the normal distribution (on a separate plot ax_norm)
+
+         ax_m    ax_norm
+    +-----------+ +---+
+    |   /-------| |\  |
+    |  /        | | | |
+    | /         | |/  |
+    |/          | |   |
+    +-----------+ +---+
     """
+
     cycles=[x for x in chrom.trace_m.keys()]
     m_values=[y for y in chrom.trace_m.values()]
     pdf_space=np.linspace(0, max(m_values), 100)
@@ -260,11 +240,11 @@ def plot_m(chrom, ax_m, ax_norm):
     # plot normal distribution next to m plot
     ax_norm.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
 
-def save_fig(output_dir, output_name, yaml=False):
+def save_fig(output_dir, output_name):
     """
-    save the figure to a specified output location as .png and .pdf
-    if yaml is True, a yaml file is dumped as well
+    save the figure of the current matplotlib plot to a specified output location as .png and .pdf
     """
+    
     # create the diagram directory if it does not exist yet
     diagram_dir=output_dir+'diagrams/'
     
@@ -279,27 +259,33 @@ def save_fig(output_dir, output_name, yaml=False):
     plt.savefig(diagram_dir+'pdf/'+output_name+'.pdf')
     plt.savefig(diagram_dir+'png/'+output_name+'.png')
     
-    if not yaml:
-        return
-    
-    # save the trace as a yaml file
-    if not os.path.exists(diagram_dir+'/yaml'):
-        os.makedirs(diagram_dir+'/yaml')
-        with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
-            yaml.dump(chrom.trace, f)
+    #if not yaml:
+    #    return
+    #
+    ## save the trace as a yaml file
+    #if not os.path.exists(diagram_dir+'/yaml'):
+    #    os.makedirs(diagram_dir+'/yaml')
+    #    with open(diagram_dir+'yaml/'+output_name+'.yaml', 'w') as f:
+    #        yaml.dump(chrom.trace, f)
 
-def plot_results(chrom, output_dir, do_yaml=False):
+def plot_results(chrom, output_dir):
     """
     plot the results of a simulated chromosome
     """    
+
     init_plot_style_settings()
 
     output_name=get_output_name(chrom)
+    plot_title=get_plot_title(chrom)
     
-    m_lim=(chrom.tS*2)#+chrom.sample_rate)//chrom.sample_rate
-    lim=(chrom.cycle)#+chrom.sample_rate)//chrom.sample_rate
-    
-    fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
+    ## trace figure
+
+    # calculate the upper bounds up to which should be plotted
+    m_lim=(chrom.tS*2)
+    lim=(chrom.cycle)
+
+    # set up the fig
+    fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom, plot_title)
 
     # plot traces
     plot_trace(chrom, chrom.trace, ax0, lim, 'black', all_alpha)
@@ -309,35 +295,48 @@ def plot_results(chrom, output_dir, do_yaml=False):
     plot_trace(chrom, chrom.trace_BtoA, ax0, lim, 'blue', B_alpha)
     plot_trace(chrom, chrom.trace_BtoA, ax3, m_lim, 'blue', B_alpha)  
 
-    # plot the rest
     plot_t50(chrom, ax0)
     plot_m(chrom, ax1, ax2)
 
     # set legends
-    ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
-    ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)#, fontsize=text_size)
+    ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
+    ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
 
-    save_fig(output_dir, output_name+"_trace", do_yaml)
+    # save the trace figure
+    save_fig(output_dir, output_name+"_trace")
 
-    x=chrom.original_gene_list
-    y0=chrom.gene_list
-    y1=chrom.t50_gene_list
+    ## dotplot figure
 
-    ts_chrom=Chrom(chrom.length, chrom.genesA, chrom.genesB, chrom.level_of_convergence, chrom.window_size, chrom.until_converged, chrom.translocations_per_cycle, chrom.cuts)
-    ts_chrom.simulation_cycle(iterations=chrom.tS, show_output=False)
-    y2=ts_chrom.gene_list
-    
-    fig, ax0, ax1, ax2=set_up_dot_fig(chrom)
+    # get the gene lists
+    original_genes=chrom.original_gene_list
+    final_genes=chrom.gene_list
+    half_time_genes=chrom.t50_gene_list
 
-    plot_dotplot(chrom, ax0, x, y0)
-    plot_dotplot(chrom, ax1, x, y1)
-    plot_dotplot(chrom, ax2, x, y2)
+    # rerun the chromosome until tS to get the list at that point
+    ts_chrom=Chrom(chrom.length, chrom.genesA, chrom.genesB, chrom.level_of_convergence, chrom.window_size, chrom.translocations_per_cycle, chrom.inversion_cuts)
+    ts_chrom.run(n=chrom.tS, show_output=False)
+    entropy_genes=ts_chrom.gene_list
 
+    # set up the fig
+    fig, ax0, ax1, ax2, ax3=set_up_dot_fig(chrom, plot_title)
+
+    # plot dotplots
+    plot_dotplot(chrom, ax0, original_genes, final_genes)
+    if chrom.t50 >= 0:
+        plot_dotplot(chrom, ax1, original_genes, half_time_genes)
+    if chrom.tS >= 0:
+        plot_dotplot(chrom, ax2, original_genes, entropy_genes)
+    if chrom.tS >= 0 and chrom.t50 >= 0:
+        plot_dotplot(chrom, ax3, entropy_genes, half_time_genes)
+
+    # save the dotplot figure
     save_fig(output_dir, output_name+"_dotplots")
 
 def log(chrom, output_dir, elapsed='N/A'):
     """
     log the state of a chromosome
+
+    TODO: change this to a better format
     """
 
     # write the state to a log file according to the input
@@ -352,23 +351,18 @@ def log(chrom, output_dir, elapsed='N/A'):
     
     log_header='timestamp;|A|;|B|;cycles;t50;AB_convergence;first_95_m;m_sigma;m_mu;Delta_t\n'
     log_format_string='{ts};{A};{B};{c};{t50};{ABconv};{m95};{sig:.3f};{mu:.3f};{dt}\n'
-    log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.AB_convergence, m95=chrom.tS, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
+    log_line=log_format_string.format(ts=str(dt.now()), A=chrom.genesA, B=chrom.genesB, c= chrom.cycle, t50=chrom.t50, ABconv=chrom.t100, m95=chrom.tS, sig=chrom.m_sigma, mu=chrom.m_mu, dt=elapsed)
 
     with open(log_dir+log_file, mode) as f:
         if new_log_file:
             f.write(log_header)
         f.write(log_line)
 
-def runtime_to_int(runtime):
-    arr=runtime.split(':')
-    mins=int(arr[0])
-    secs=int(arr[1])
-    return mins*60+secs
-
-def int_to_runtime(f):
-    return str(int(f//60))+':'+str(int(f%60)).zfill(2)
-        
 def metalog(output_dir):
+    """
+    TODO: better format
+    """
+    
     # write some information about the input paramters into a separate log file
     log_dir=output_dir+'log/'
     metalog_file='metalog.csv'
@@ -392,7 +386,7 @@ def metalog(output_dir):
             runs=[]
 
             with open(logfile) as lf:
-                runs=[run.rstrip().split(';') for run in lf.readlines()]
+                runs=[run.rstrip().split(csv_separator) for run in lf.readlines()]
 
             header=runs[0]
             t50s=[float(run[header.index('t50')]) for run in runs[1:]]
@@ -403,138 +397,49 @@ def metalog(output_dir):
             metalog_line=metalog_format_string.format(A=Asize, B=Bsize, conv=converging, wsize=wsize, loc=loc)        
             metainfo_string=metainfo_format_string.format(runs=len(runs), avt50=np.average(t50s), avt100=np.average(t100s), avts=np.average(tss), avrt=int_to_runtime(np.average(rts)))
             mf.write(metalog_line+metainfo_string)
-        
-def calculate_average(chrom, path, col):
-    """
-    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
-    """
-    filename=get_output_name(chrom)
-    raw_data=read_log_file(path, filename, cols=[col])
-    data=[int(line[0]) for line in raw_data]
-    average=np.average(data)
-    return average
-        
-#def calculate_average_t100(chrom, path):
-#,average_tentrop;{avtent:.2f}y    """
-#,average_tentropy    calculate the average time (in cycles) it took to reach t50 given a set of parameters and return it
-#,average_tentropy    """
-#,average_tentrop;{avtent:.2f}y    filename=get_output_name(chrom)
-#,average_tentrop;{avtent:.2f}y    raw_data=read_log_file(path, filename, cols=['cycles'])
-#,average_tentrop;{avtent:.2f}y    data=[int(line[0]) for line in raw_data]
-#,average_tentrop;{avtent:.2f}y    average=np.average(data)
-#,average_tentrop;{avtent:.2f}y    return average;{avtent:.2f}
-
-def plot_average_t50s(path):
-    """
-    read average t50 values from the metalog file and plot them
-    """
-    cols=['|A|', '|B|', 'average_t50', 'average_t100', 'average_ts', 'window_size']
-    raw_data=read_log_file(path, 'metalog', cols=cols)
-    data=[[int(line[cols.index('|A|')])+int(line[cols.index('|B|')]),
-           float(line[cols.index('average_t50')]),
-           float(line[cols.index('average_t100')]),
-           float(line[cols.index('average_ts')]),
-           int(line[cols.index('window_size')])]
-          for line in raw_data if float(line[2]) >= 0]
-
-    wsizes=[]
-    grouped_data={}
-    for line in data:
-        wsize=line[-1]
-        if wsize not in grouped_data:
-            grouped_data[wsize]=[]
-        grouped_data[wsize].append([line[0], line[1], line[2], line[3]])
-    
-    init_plot_style_settings()
-    fig=plt.figure(figsize=(20, 20))
-    gs=fig.add_gridspec(4, 2)
-    ax0=fig.add_subplot(gs[0, 0])
-    ax1=fig.add_subplot(gs[1, 0])
-    ax2=fig.add_subplot(gs[0, 1])
-    ax3=fig.add_subplot(gs[1, 1])
-    ax4=fig.add_subplot(gs[2, 0])
-    ax5=fig.add_subplot(gs[3, 0])
-    ax6=fig.add_subplot(gs[2, 1])
-    ax7=fig.add_subplot(gs[3, 1])
-
-    for k in grouped_data:
-        kdata=grouped_data[k]
-        x=[line[0] for line in kdata]
-        y=[line[1] for line in kdata]
-        logy=np.log(y)
-        ydiff=[line[2]-line[1] for line in kdata]
-        logydiff=np.log(ydiff)
-        yratio=[line[1]/line[2] for line in kdata]
-        logyratio=np.log(yratio)
-        ydiffs=[line[1]-line[3] for line in kdata]
-        logydiffs=np.log(ydiffs)
-
-        label='w{}'.format(k)
-
-        ax0.scatter(x, y, label=label)
-        ax1.scatter(x, logy, label=label)
-        ax2.scatter(x, ydiff, label=label)
-        ax3.scatter(x, logydiff, label=label)
-        ax4.scatter(x, yratio, label=label)
-        ax5.scatter(x, logyratio, label=label)
-        ax6.scatter(x, ydiffs, label=label)
-        ax7.scatter(x, logydiffs, label=label)
-    
-    #for line in data:
-    #    offset=max([np.log10(l[1]) for l in data])
-    #    print(offset)
-    #    print(offset*0.2)
-    #    print(np.log10(line[1])+offset*0.2)
-    #    ax0.annotate('w'+str(line[2]), (line[0], line[1]+offset*0.02), bbox=bbox, fontsize=text_size/2)
-    #    ax1.annotate('w'+str(line[2]), (line[0], np.log10(line[1])+offset*0.02), bbox=bbox, fontsize=text_size/2)
-    #ax0.set_xlabel(r'$|A|+|B|$')
-    ax5.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
-    ax7.set_xlabel(r'$|A|+|B|$', fontsize=text_size)
-    ax0.set_ylabel(r'$\bar{\tau}_{50\%}$', fontsize=text_size)
-    ax1.set_ylabel(r'$ln(\bar{\tau}_{50\%})$', fontsize=text_size)
-    ax2.set_ylabel(r'$\bar{\tau}_{50\%}-\bar{\tau}_{100\%}$', fontsize=text_size)
-    ax3.set_ylabel(r'$ln(\bar{\tau}_{50\%}-\bar{\tau}_{100\%})$', fontsize=text_size)
-    ax4.set_ylabel(r'$\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}}$', fontsize=text_size)
-    ax5.set_ylabel(r'$ln(\frac{\bar{\tau}_{50\%}}{\bar{\tau}_{100\%}})$', fontsize=text_size)
-    ax6.set_ylabel(r'$\bar{\tau}_{50\%}-\bar{\tau}_{S}$', fontsize=text_size)
-    ax7.set_ylabel(r'$ln(\bar{\tau}_{50\%}-\bar{\tau}_{S})$', fontsize=text_size)
-    ax0.legend()
-    ax1.legend()
-    ax2.legend()
-    ax3.legend()
-    ax4.legend()
-    ax5.legend()
-    ax6.legend()
-    ax7.legend()
-
-    plt.savefig(path+'log/average_t50s.png')
 
 def get_output_name(chrom):
     """
-    return a string that represents the name for any output files depending on chromosome parameters (barring file endings)
+    return a string to be used as the base for saving logs
+
+    TODO: will be redundant with the new log file format
     """
-    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=chrom.genesA, Bsize=chrom.genesB, loc=chrom.level_of_convergence, wsize=chrom.window_size)+('_c' if chrom.until_converged else '')
     
+    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=chrom.genesA, Bsize=chrom.genesB, loc=chrom.level_of_convergence, wsize=chrom.window_size)
+
+def get_plot_title(chrom):
+    """
+    return a string to be used as title for the plots of this chromosome
+
+    TODO: make a bit better (idk how yet)
+    """
+    return r"$|A|={Asize}, |B|={Bsize}, w={wsize}$".format(Asize=chrom.genesA, Bsize=chrom.genesB, wsize=chrom.window_size)
+
 def create_parser():
     """
     creates an argparse parser for the CLI arguments
     """
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
+
     # positional arguments
     parser.add_argument('Asize', type=int, nargs='?', help="integer value for the number of genes in group A")
     parser.add_argument('Bsize', type=int, nargs='?', help="integer value for the number of genes in group B")
+
     # named general arguments
     parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (default: './')")
+
     # named simulation arguments
     parser.add_argument('-c', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (alternative to --converge)")
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
     parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (default: 0)")
+
     # flag simulation arguments
-    #parser.add_argument('-C', '--converge', action='store_true', default=False, help="specify whether the simulation should run until convergence (default: False)")
     parser.add_argument('-P', '--plot-curves', action='store_true', default=False, help="tell the simulation to plot the curves in the end (default: False)")
+
     # flag simulation-free arguments
     parser.add_argument('-M', '--metalog', action='store_true', help="collect averages from log files and store them in metalog.csv (not running a simulation)")
     parser.add_argument('-T', '--plot-average-t50', action='store_true', help="plot the average t50 of all previous simulations in this directory (not running a simulation)")
     
     return parser
+
