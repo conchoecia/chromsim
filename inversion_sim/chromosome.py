@@ -54,14 +54,22 @@ class Chrom():
         self.seen = {} # seen is a list of genes that have already interacted with each other, value is the cycle of the first interaction between the two genes that are the key
         self._update_seen(0, len(self.gene_list)-1)
 
-    def _print_progress(self, progress, s=""):
+    def _print_progress(self, n):
         """
         print a line showing the progess of the simulation
 
         s is appended to the end of the string
         """
-        print("\rcycle {cycle:15d} {progress:.2f}%".format(cycle=self.cycle, progress=progress), end="")
         
+        print("\rcycle {cycle:15d} {progress:.2f}%".format(cycle=self.cycle, progress=(self.cycle/n if n >= 0 else len(self.seen)/self.converging_at)*100), end="")
+
+    def _quit_condition(self, n):
+        """
+        return True or False depending on whether the condition to end the simulation is met (convergence/cycles)
+        """
+
+        return self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
+
     def run(self, n=-1, show_output=True):
         """
         run the simulation for n iterations, or until convergence if n < 0
@@ -69,34 +77,27 @@ class Chrom():
         print progress report to the console if show_output is True
         """
 
-        # run n iterations if n >= 0
-        if n >= 0:
-            # run the simulation for the specified number of iterations
-            while self.cycle < n:
-                if show_output and self.cycle%100 == 0:
-                    self._print_progress(self.cycle/n*100)
-                self._shuffle()
-            if show_output:
-                # show the progress bar with 100% completion
-                self._print_progress(100)
-        # run until convergence otherwise
-        else:
-            AB_have_converged=False
-            while len(self.seen)/self.converging_at < self.level_of_convergence:
-                if show_output and self.cycle%100 == 0:
-                    self._print_progress(len(self.seen)/self.converging_at*100)
-                self._shuffle()
+        # run the simulation for the specified number of iterations/until convergence
+        while not self._quit_condition(n):
+            if show_output and self.cycle%100 == 0:
+                self._print_progress(n)
                 
-                if self.t50 < 0 and len(self.seen) >= self.converging_at/2:
-                    self.t50=self.cycle
-                    self.t50_gene_list=self.gene_list.copy()
-                if self.t50 >= 0 and self.AB_convergence < 0:
-                    if self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB:
-                        self.AB_convergence=self.cycle
-            if show_output:
-                # show the progress bar with level_of_convergence completion
-                self._print_progress(self.level_of_convergence*100)
-
+            self._shuffle()
+            
+            if self.t50 < 0 and len(self.seen) >= self.converging_at/2:
+                self.t50=self.cycle
+                self.t50_gene_list=self.gene_list.copy()
+            if self.t100 < 0 and len(self.seen) >= self.converging_at:
+                self.t100=self.cycle
+                self.t100_gene_list=self.gene_list.copy()
+            if self.t50 >= 0 and self.AB_convergence < 0:
+                if self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB:
+                    self.AB_convergence=self.cycle
+            
+        if show_output:
+            # show the progress bar with 100% completion
+            self._print_progress(n)
+        
         self._calculate()
         
     def _calculate(self):
@@ -142,7 +143,7 @@ class Chrom():
             conv+=i
         return conv-1
 
-    def _pick_cut(self, type):
+    def _pick_cut(self, type=""):
         """
         return a tuple of indices that represent the breakpoints of the next inversion
 
@@ -304,3 +305,6 @@ class Chrom():
         # calculate the new m value and append to the data structure
         new_m=(new_transitions-1)/self.m_const
         self.trace_m[self.cycle]=new_m
+
+def check_AB_pair(AB0, AB1):
+    return 0 if AB0[0] == AB1[0] else 1
