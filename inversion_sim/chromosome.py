@@ -4,29 +4,37 @@ This file contains the class for a chromosome with the ability to simulate inver
 
 import random
 import numpy as np
+import datetime as dt
+
+def check_AB_pair(AB0, AB1):
+    return 0 if AB0[0] == AB1[0] else 1
 
 class Chrom():
-    def __init__(self, length, Asize, Bsize, level_of_convergence=1, window_size=1, translocations_per_cycle=0, cuts=[]):
+    def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, translocations_per_cycle=0, inversion_cuts=[]):
 
         # set parameters
+        self.Asize=Asize
+        self.Bsize=Bsize
+        self.size=self.Asize+self.Bsize
         self.length=length
-        self.genesA=Asize
-        self.genesB=Bsize
-        self.size=self.genesA+self.genesB
         self.level_of_convergence=level_of_convergence
         self.translocations_per_cycle=translocations_per_cycle
         self.window_size=window_size
-        self.inversion_cuts=cuts if cuts else []
+
+        # set the initial list of cuts
+        self.inversion_cuts=inversion_cuts if inversion_cuts else []
         
         # set constants based on parameters
-        self.m_const=2*self.genesA*self.genesB/(self.genesA+self.genesB-1)
+        self.m_const=2*self.Asize*self.Bsize/(self.Asize+self.Bsize-1)
+        print(self.Asize)
+        print(self.Bsize)
         self.converging_at=self._calculate_convergence()
 
         # set the cycle number to 0
         self.cycle=0
 
         # initialize gene list
-        self.gene_list = ["A."+str(i+1) for i in range(self.genesA)] + ["B."+str(i+1) for i in range(self.genesB)]
+        self.gene_list = ["A."+str(i+1) for i in range(self.Asize)] + ["B."+str(i+1) for i in range(self.Bsize)]
         self.original_gene_list=self.gene_list.copy()
         self.t50_gene_list=None
 
@@ -53,6 +61,9 @@ class Chrom():
         # initialize dictionary of new seen interactions
         self.seen = {} # seen is a list of genes that have already interacted with each other, value is the cycle of the first interaction between the two genes that are the key
         self._update_seen(0, len(self.gene_list)-1)
+
+        # give this chromosome a timestamp
+        self.timestamp=dt.datetime.now()
 
     def _print_progress(self, n):
         """
@@ -91,7 +102,7 @@ class Chrom():
                 self.t100=self.cycle
                 self.t100_gene_list=self.gene_list.copy()
             if self.t50 >= 0 and self.AB_convergence < 0:
-                if self.converged_AtoB >= self.genesA and self.converged_BtoA >= self.genesB:
+                if self.converged_AtoB >= self.Asize and self.converged_BtoA >= self.Bsize:
                     self.AB_convergence=self.cycle
             
         if show_output:
@@ -139,7 +150,7 @@ class Chrom():
         """
 
         conv=0
-        for i in range(self.genesA+self.genesB):
+        for i in range(self.Asize+self.Bsize):
             conv+=i
         return conv-1
 
@@ -268,12 +279,12 @@ class Chrom():
                             #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
                             # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
                             #   cannot interact with the other telomere)
-                            if self.trace_AtoB[pair[pair_index]][-1][1] == self.genesB-(1 if pair[pair_index].split('.')[1] == '1' else 0):
+                            if self.trace_AtoB[pair[pair_index]][-1][1] == self.Bsize-(1 if pair[pair_index].split('.')[1] == '1' else 0):
                                 self.converged_AtoB+=1
                         if pair[pair_index].startswith("B") and pair[other].startswith("A"):
                             self.trace_BtoA[pair[pair_index]].append((self.cycle, self.trace_BtoA[pair[pair_index]][-1][1]+1)) #[-1] += 1
                             # same as above, but for B-to-A
-                            if self.trace_BtoA[pair[pair_index]][-1][1] == self.genesA-(1 if pair[pair_index].split('.')[1] == str(self.genesB) else 0):
+                            if self.trace_BtoA[pair[pair_index]][-1][1] == self.Asize-(1 if pair[pair_index].split('.')[1] == str(self.Bsize) else 0):
                                 self.converged_BtoA+=1
                 
     def _update_m(self, i0, i1):
@@ -305,6 +316,3 @@ class Chrom():
         # calculate the new m value and append to the data structure
         new_m=(new_transitions-1)/self.m_const
         self.trace_m[self.cycle]=new_m
-
-def check_AB_pair(AB0, AB1):
-    return 0 if AB0[0] == AB1[0] else 1

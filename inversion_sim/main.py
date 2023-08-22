@@ -6,6 +6,7 @@ This is the file to be executed in in order to simulate inversions on a chromoso
 
 from chromosome import Chrom
 import utils
+import plot
 import time
 import os
 
@@ -50,19 +51,20 @@ def main():
     start=time.time()
 
     print("\ncreating chromosome...")
-    chrom=Chrom(0, Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
+    chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
     print("\nrunning simulation...")
     chrom.run(n=cycles)
     if do_plots:
         print("\nplotting results...")
-        utils.plot_results(chrom, outdir)
-
+        plot.plot_results(chrom, outdir)
+        
+    #utils.log(chrom, outdir, elapsed=elapsed_string)
+    utils.save(chrom)
+        
     end=time.time()
     elapsed=end-start
     elapsed_string="{minutes:02d}:{seconds:02d}".format(minutes=int(elapsed//60), seconds=int(elapsed%60))
     print("\nelapsed time: "+elapsed_string)
-
-    utils.log(chrom, outdir, elapsed=elapsed_string)
     
 if __name__ == "__main__":
     main()
