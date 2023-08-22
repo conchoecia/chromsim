@@ -2,7 +2,10 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import numpy as np
 import pandas as pd
+import os
+
 from chromosome import Chrom
+import utils
 
 def get_output_name(chrom):
     """
@@ -41,7 +44,7 @@ def init_plot_style_settings():
     global text_size
     text_size=20    
 
-def set_up_dot_fig(chrom, title):
+def set_up_dot_fig(chrom):
     """
     set up all the axes needed for the dotplots in a grid
     """
@@ -68,7 +71,6 @@ def set_up_dot_fig(chrom, title):
     ax3.set_xlabel(r"$\tau_S$", fontsize=text_size)
     ax3.set_ylabel(r"$\tau_{50\%}$", fontsize=text_size)
 
-    fig.suptitle(title, fontsize=plot_title_size)
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
     ax2.set_title(subplot2_title, fontsize=subplot_title_size)
@@ -76,7 +78,7 @@ def set_up_dot_fig(chrom, title):
 
     return fig, ax0, ax1, ax2, ax3
     
-def set_up_trace_fig(chrom, title):
+def set_up_trace_fig(chrom):
     """
     set up all the axes needed for the traces on a grid
     """
@@ -92,11 +94,11 @@ def set_up_trace_fig(chrom, title):
     ax1.set_xlim([0, chrom.tS*2])
     
     global A_alpha
-    A_alpha   = max(1/chrom.genesA, 0.1)
+    A_alpha   = max(1/chrom.Asize, 0.1)
     global B_alpha
     B_alpha   = max(1/chrom.Bsize, 0.1)
     global all_alpha
-    all_alpha = max(1/(chrom.genesA + chrom.Bsize), 0.05)
+    all_alpha = max(1/(chrom.Asize + chrom.Bsize), 0.05)
     
     # set plot titles and axis labels
     subplot0_title=r"number of unique interactions after $n$ inversion cycles"
@@ -109,7 +111,6 @@ def set_up_trace_fig(chrom, title):
     ax3.set_xlabel("inversion cycle", fontsize=text_size)
     ax3.set_ylabel("unique interactions", fontsize=text_size)
 
-    fig.suptitle(title, fontsize=plot_title_size)
     ax0.set_title(subplot0_title, fontsize=subplot_title_size)
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
     
@@ -215,13 +216,13 @@ def plot_m(chrom, ax_m, ax_norm):
     # plot normal distribution next to m plot
     ax_norm.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
 
-def save_fig(output_dir, output_name):
+def save_fig(outdir, outname):
     """
     save the figure of the current matplotlib plot to a specified output location as .png and .pdf
     """
     
     # create the diagram directory if it does not exist yet
-    diagram_dir=output_dir+'diagrams/'
+    diagram_dir=outdir+'diagrams/'
     
     if not os.path.exists(diagram_dir):
         os.makedirs(diagram_dir)
@@ -231,18 +232,25 @@ def save_fig(output_dir, output_name):
                 os.makedirs(diagram_dir+'/png')
                 
     # save this as a pdf and png
-    plt.savefig(diagram_dir+'pdf/'+output_name+'.pdf')
-    plt.savefig(diagram_dir+'png/'+output_name+'.png')
+    plt.savefig(outname+'.pdf')
+    plt.savefig(outname+'.png')
 
-def plot_results(chrom, output_dir):
+def plot_chrom(source, outdir, gif=False):
+    chrom, results, ts=utils.parse_inv_file(source)
+
+    if not gif:
+        chrom.run(len(chrom.inversion_cuts))
+
+        plot_results(chrom, outdir)
+    
+def plot_results(chrom, outdir):
     """
     plot the results of a simulated chromosome
     """    
 
     init_plot_style_settings()
 
-    output_name=get_output_name(chrom)
-    plot_title=get_plot_title(chrom)
+    outname=str(chrom.timestamp)
     
     ## trace figure
 
@@ -251,7 +259,7 @@ def plot_results(chrom, output_dir):
     lim=(chrom.cycle)
 
     # set up the fig
-    fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom, plot_title)
+    fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
 
     # plot traces
     plot_trace(chrom, chrom.trace, ax0, lim, 'black', all_alpha)
@@ -269,7 +277,7 @@ def plot_results(chrom, output_dir):
     ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
 
     # save the trace figure
-    save_fig(output_dir, output_name+"_trace")
+    save_fig(outdir, outname+"_trace")
 
     ## dotplot figure
 
@@ -279,12 +287,12 @@ def plot_results(chrom, output_dir):
     half_time_genes=chrom.t50_gene_list
 
     # rerun the chromosome until tS to get the list at that point
-    ts_chrom=Chrom(chrom.length, chrom.genesA, chrom.Bsize, chrom.level_of_convergence, chrom.window_size, chrom.translocations_per_cycle, chrom.inversion_cuts)
+    ts_chrom=Chrom(chrom.Asize, chrom.Bsize, chrom.level_of_convergence, chrom.window_size, chrom.translocations_per_cycle, chrom.inversion_cuts)
     ts_chrom.run(n=chrom.tS, show_output=False)
     entropy_genes=ts_chrom.gene_list
 
     # set up the fig
-    fig, ax0, ax1, ax2, ax3=set_up_dot_fig(chrom, plot_title)
+    fig, ax0, ax1, ax2, ax3=set_up_dot_fig(chrom)
 
     # plot dotplots
     plot_dotplot(chrom, ax0, original_genes, final_genes)
@@ -296,4 +304,4 @@ def plot_results(chrom, output_dir):
         plot_dotplot(chrom, ax3, entropy_genes, half_time_genes)
 
     # save the dotplot figure
-    save_fig(output_dir, output_name+"_dotplots")
+    save_fig(outdir, outname+"_dotplots")

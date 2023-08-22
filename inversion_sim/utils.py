@@ -10,20 +10,14 @@ from datetime import datetime as dt
 from chromosome import Chrom
 
 FILE_ENDING=".inv"
-
-def get_outname(chrom):
-    """
-    return an output name for file related to the chromosome
-    """
-    
-    return str(chrom.timestamp)
         
 def save(chrom, outdir="./"):
     """
     save the chromosome in a re-runnable file format
     """
         
-    header_format_string="""## params
+    header_format_string="""# timestamp {ts}
+## params
 # Asize {Asize}
 # Bsize {Bsize}
 # window_size {ws}
@@ -38,9 +32,9 @@ def save(chrom, outdir="./"):
 
 """
 
-    fname=get_outname(chrom)+FILE_ENDING
+    fname=str(chrom.timestamp)+FILE_ENDING
 
-    header=header_format_string.format(Asize=chrom.Asize, Bsize=chrom.Bsize, ws=chrom.window_size, loc=chrom.level_of_convergence, t100=chrom.t100, t50=chrom.t50, tS=chrom.tS, mu=chrom.m_mu, sigma=chrom.m_sigma, AB_convergence=chrom.AB_convergence)
+    header=header_format_string.format(ts=chrom.timestamp, Asize=chrom.Asize, Bsize=chrom.Bsize, ws=chrom.window_size, loc=chrom.level_of_convergence, t100=chrom.t100, t50=chrom.t50, tS=chrom.tS, mu=chrom.m_mu, sigma=chrom.m_sigma, AB_convergence=chrom.AB_convergence)
 
     with open(outdir+fname, 'w') as f:
         f.write(header)
@@ -60,18 +54,17 @@ def parse_inv_file(file):
             head.append(line.rstrip())
             line=f.readline()
             
-        print("head")
-        print(head)
         # extract the parameters and results from the header
-        params=[line.split(' ')[2] for line in head[1:5]]
-        results=[line.split(' ')[2] for line in head[6:12]]
+        params=[line.split(' ')[2] for line in head[2:6]]
+        results=[line.split(' ')[2] for line in head[7:13]]
 
         # parse the cuts to a list of tuples
         cuts=[]
-        while line !='\n':
-            line=f.readline()
+        line=f.readline()
+        while line != '':
             ints=list(map(int, line.rstrip().split('\t')))
             cuts.append((ints[0], ints[1]))
+            line=f.readline()
 
         # parse the parameters and results
         Asize=int(params[0])
@@ -94,8 +87,9 @@ def parse_inv_file(file):
                       'mu': mu,
                       'sigma': sigma,
                       'AB_convergence': AB_conv}
+        ts=head[0]
 
-        return chrom, results_dict
+        return chrom, results_dict, ts
 
 class FloatRange(abc.Container):
 
@@ -119,39 +113,28 @@ class FloatRange(abc.Container):
         self.n+=self.step
         return self.n-self.step
 
-def get_plot_title(chrom):
-    """
-    return a string to be used as title for the plots of this chromosome
-
-    TODO: make a bit better (idk how yet)
-    """
-    return r"$|A|={Asize}, |B|={Bsize}, w={wsize}$".format(Asize=chrom.genesA, Bsize=chrom.genesB, wsize=chrom.window_size)
-
 def create_parser():
     """
     creates an argparse parser for the CLI arguments
     """
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
 
-    # positional arguments
-    parser.add_argument('Asize', type=int, nargs='?', help="integer value for the number of genes in group A")
-    parser.add_argument('Bsize', type=int, nargs='?', help="integer value for the number of genes in group B")
+    # simulation arguments
+    parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -c, -l, -w, and -t")
+    parser.add_argument('-a', '--asize', type=int, default=-1, help="integer value for the number of genes in group A")
+    parser.add_argument('-b', '--bsize', type=int, default=-1, help="integer value for the number of genes in group B")
+    parser.add_argument('-c', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional)")
+    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
+    parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional)")
+    parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (optional)")
 
-    # named general arguments
-    parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (default: './')")
-
-    # named simulation arguments
-    parser.add_argument('-c', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (alternative to --converge)")
-    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (default: 1)")
-    parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (default: 1)")
-    parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (default: 0)")
-
-    # flag simulation arguments
-    parser.add_argument('-P', '--plot-curves', action='store_true', default=False, help="tell the simulation to plot the curves in the end (default: False)")
-
-    # flag simulation-free arguments
-    parser.add_argument('-M', '--metalog', action='store_true', help="collect averages from log files and store them in metalog.csv (not running a simulation)")
-    parser.add_argument('-T', '--plot-average-t50', action='store_true', help="plot the average t50 of all previous simulations in this directory (not running a simulation)")
+    # plotting arguments
+    parser.add_argument('-P', '--plot', action='store_true', help="plot a chromosome specified by -s")
+    parser.add_argument('-s', '--source', type=str, help="the .inv file to load")
+    parser.add_argument('-G', '--gif', action='store_true', help="create an animated GIF of the simulation process")
+    
+    # other
+    parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (optional)")
     
     return parser
 

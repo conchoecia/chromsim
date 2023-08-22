@@ -11,7 +11,7 @@ def check_AB_pair(AB0, AB1):
 
 class Chrom():
     def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, translocations_per_cycle=0, inversion_cuts=[]):
-
+        
         # set parameters
         self.Asize=Asize
         self.Bsize=Bsize
@@ -26,8 +26,6 @@ class Chrom():
         
         # set constants based on parameters
         self.m_const=2*self.Asize*self.Bsize/(self.Asize+self.Bsize-1)
-        print(self.Asize)
-        print(self.Bsize)
         self.converging_at=self._calculate_convergence()
 
         # set the cycle number to 0
@@ -65,6 +63,26 @@ class Chrom():
         # give this chromosome a timestamp
         self.timestamp=dt.datetime.now()
 
+    def __str__(self):
+        format_string="""timestamp {ts}
+params:
+ Asize {Asize}
+ Bsize {Bsize}
+ window_size {ws}
+ level_of_convergence {loc:.2f}
+results:
+ t100 {t100}
+ t50 {t50}
+ tS {tS}
+ mu {mu:.2f}
+ sigma {sigma:.2f}
+ AB_convergence {AB_convergence}"""
+
+        ret=format_string.format(ts=self.timestamp, Asize=self.Asize, Bsize=self.Bsize, ws=self.window_size, loc=self.level_of_convergence, t100=self.t100, t50=self.t50, tS=self.tS, mu=self.m_mu, sigma=self.m_sigma, AB_convergence=self.AB_convergence)
+
+        return ret
+    
+
     def _print_progress(self, n):
         """
         print a line showing the progess of the simulation
@@ -81,7 +99,7 @@ class Chrom():
 
         return self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
 
-    def run(self, n=-1, show_output=True):
+    def run(self, n=-1, show_output=False):
         """
         run the simulation for n iterations, or until convergence if n < 0
 
