@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import matplotlib as mpl
 from scipy import stats
+from scipy import optimize as opt
 import numpy as np
 import pandas as pd
 import os
@@ -152,30 +153,31 @@ def plot_trace(chrom, trace, ax, lim, color='blue', alpha=0.5):
 
     # plot all the individual traces
     # at the same time collect them into a single combined trace
-    all=[]
+    combined=[]
     for k in trace:
         x, y= [], []
         for tup in trace[k]:
-            if tup[0] > lim:
-                break
-            x.append(tup[0])
-            y.append(tup[1])
-            all.append(tup)
+            if tup[0] <= lim:
+                x.append(tup[0])
+                y.append(tup[1])
+                combined.append(tup)
         ax.plot(x, y, color=color, lw = setlw, alpha=alpha)
-    all=sorted(all)
+    combined.sort()
 
-    # calculate the moving average of the combined trace
-    df = pd.DataFrame(all, columns =['cycle', 'interactions'])
-    new_all=df.rolling(len(all)//10).mean()
+    # define a callable for scipy to fit
+    def curve(x, a, b, c):
+        return a*(1-np.exp(-b*x))+c
 
-    # add the last elements of the original list to make sure the line goes all the way to the end
-    x=new_all['cycle'].tolist()
-    x.append(all[-1][0])
-    y=new_all['interactions'].tolist()
-    y.append(all[-1][1])
+    # fit the callable  to the combined traces
+    x_fit, y_raw=[], []
+    for tup in combined:
+        x_fit.append(tup[0])
+        y_raw.append(tup[1])
+    params=opt.curve_fit(curve, x_fit, y_raw)[0]
+    y_fit=[curve(el, params[0], params[1], params[2]) for el in x_fit]
 
-    # plot the combined trace
-    ax.plot(x, y, color=color, lw = setlw*10, alpha=0.75)
+    # plot the fitted data
+    ax.plot(x_fit, y_fit, color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
     """
