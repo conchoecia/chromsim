@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.animation as ani
 from scipy import stats
 import numpy as np
 import pandas as pd
@@ -135,8 +136,10 @@ def plot_dotplot(chrom, ax, x, y):
             xB_indices.append(x.index(gene))
             yB_indices.append(y.index(gene))
 
-    ax.scatter(xA_indices, yA_indices, lw=setlw*2)
-    ax.scatter(xB_indices, yB_indices, lw=setlw*2)
+    scatA=ax.scatter(xA_indices, yA_indices, lw=setlw*2)
+    scatB=ax.scatter(xB_indices, yB_indices, lw=setlw*2)
+
+    return scatA, scatB
 
 def plot_trace(chrom, trace, ax, lim, color='blue', alpha=0.5):
     """
@@ -220,35 +223,47 @@ def save_fig(outdir, outname):
     """
     save the figure of the current matplotlib plot to a specified output location as .png and .pdf
     """
-    
-    # create the diagram directory if it does not exist yet
-    diagram_dir=outdir+'diagrams/'
-    
-    if not os.path.exists(diagram_dir):
-        os.makedirs(diagram_dir)
-        if not os.path.exists(diagram_dir+'/pdf'):
-            os.makedirs(diagram_dir+'/pdf')
-            if not os.path.exists(diagram_dir+'/png'):
-                os.makedirs(diagram_dir+'/png')
                 
     # save this as a pdf and png
     plt.savefig(outname+'.pdf')
     plt.savefig(outname+'.png')
-
+    
 def plot_chrom(source, outdir, gif=False):
     chrom, results, ts=utils.parse_inv_file(source)
 
-    if not gif:
+    init_plot_style_settings()
+
+    if gif:
+        make_dotplot_gif(chrom, outdir, results['t50'])
+    else:
         chrom.run(len(chrom.inversion_cuts))
 
         plot_results(chrom, outdir)
+
+        
+def make_dotplot_gif(chrom, outdir, cycles):
+
+    max_frames=1000
+    frames=min(max_frames, cycles)
+    step=cycles/frames
     
+    fig, ax=plt.subplots()
+
+    def animate(i):
+        chrom.run(chrom.cycle+step)
+        ax.clear()
+        ax.text(0, 1.05, "cycle {:4d}".format(chrom.cycle), transform=ax.transAxes, ha='left', weight='bold')
+        scat0, scat1=plot_dotplot(chrom, ax, chrom.original_gene_list, chrom.gene_list)
+        #return (scat0, scat1)
+
+    animation=ani.FuncAnimation(fig, animate, repeat=True, frames=frames, interval=500)
+    
+    animation.save(str(chrom.timestamp)+'.gif', writer='imagemagick')
+
 def plot_results(chrom, outdir):
     """
     plot the results of a simulated chromosome
-    """    
-
-    init_plot_style_settings()
+    """
 
     outname=str(chrom.timestamp)
     
