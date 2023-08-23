@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+import matplotlib as mpl
 from scipy import stats
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ def get_output_name(chrom):
     
     return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=chrom.genesA, Bsize=chrom.Bsize, loc=chrom.level_of_convergence, wsize=chrom.window_size)
 
-def init_plot_style_settings():
+def init_plot_style_settings(chrom):
     """
     set the global values for text sizes, colors, etc. to be used in plots
     """
@@ -44,8 +45,17 @@ def init_plot_style_settings():
     global subplot_title_size
     subplot_title_size=30
     global text_size
-    text_size=20    
-
+    text_size=20
+    global marker_size
+    marker_size=mpl.rcParams['lines.markersize']**2*1000/chrom.size
+    global A_alpha
+    A_alpha   = max(1/chrom.Asize, 0.1)
+    global B_alpha
+    B_alpha   = max(1/chrom.Bsize, 0.1)
+    global all_alpha
+    all_alpha = max(1/(chrom.Asize + chrom.Bsize), 0.05)
+    
+    
 def set_up_dot_fig(chrom):
     """
     set up all the axes needed for the dotplots in a grid
@@ -95,13 +105,6 @@ def set_up_trace_fig(chrom):
     ax0.set_xlim(0, chrom.cycle)
     ax1.set_xlim([0, chrom.tS*2])
     
-    global A_alpha
-    A_alpha   = max(1/chrom.Asize, 0.1)
-    global B_alpha
-    B_alpha   = max(1/chrom.Bsize, 0.1)
-    global all_alpha
-    all_alpha = max(1/(chrom.Asize + chrom.Bsize), 0.05)
-    
     # set plot titles and axis labels
     subplot0_title=r"number of unique interactions after $n$ inversion cycles"
     subplot1_title=r"$m$ after $n$ inversion cycles"
@@ -137,8 +140,8 @@ def plot_dotplot(chrom, ax, x, y):
             xB_indices.append(x.index(gene))
             yB_indices.append(y.index(gene))
 
-    scatA=ax.scatter(xA_indices, yA_indices, lw=setlw*2)
-    scatB=ax.scatter(xB_indices, yB_indices, lw=setlw*2)
+    scatA=ax.scatter(xA_indices, yA_indices, lw=setlw*2, s=marker_size)
+    scatB=ax.scatter(xB_indices, yB_indices, lw=setlw*2, s=marker_size)
 
     return scatA, scatB
 
@@ -239,10 +242,12 @@ def plot_chrom(source, outdir, gif=False):
     # get the file name without the file ending
     outname=Path(source).stem
     
-    init_plot_style_settings()
-
+    init_plot_style_settings(chrom)
+    
     if gif:
-        make_dotplot_gif(chrom, outdir, results['t50'], outname)
+        print("generating GIF file of the inversion process - this might take a while")
+        
+        make_dotplot_gif(chrom, outdir, results['tS'], outname)
     else:
         chrom.run(len(chrom.inversion_cuts))
 
@@ -251,17 +256,22 @@ def plot_chrom(source, outdir, gif=False):
         
 def make_dotplot_gif(chrom, outdir, cycles, outname):
     """
-    create an animated GIF of the chromosome's inversion process up to τ50 (max. 1000 frames)
+    create an animated GIF of the chromosome's inversion process up to cycles (max. 1000 frames)
     """
 
     max_frames=1000
     frames=min(max_frames, cycles)
+    frames=cycles
     step=cycles/frames
-    
-    fig, ax=plt.subplots()
 
+    figsize=(10, 10)
+    fig=plt.figure(figsize=figsize)
+    global marker_size
+    marker_size/=4
+    ax=fig.add_subplot()
+    
     def animate(i):
-        chrom.run(chrom.cycle+step)
+        chrom.run(step*i)
         ax.clear()
         ax.text(0, 1.05, "cycle {:4d}".format(chrom.cycle), transform=ax.transAxes, ha='left', weight='bold')
         scat0, scat1=plot_dotplot(chrom, ax, chrom.original_gene_list, chrom.gene_list)
