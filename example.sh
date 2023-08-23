@@ -8,7 +8,7 @@ else
 fi
 
 echo simulation . . .
-./inversion_sim/main.py -o $outdir -S -a 100 -b 200 -n example
+./inversion_sim/main.py -o $outdir -S -a 100 -b 100 -n example
 echo plots . . .
 ./inversion_sim/main.py -o $outdir -P -s $outdir/example.inv
 echo gif . . .
