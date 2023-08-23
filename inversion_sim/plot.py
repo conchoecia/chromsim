@@ -4,6 +4,7 @@ from scipy import stats
 import numpy as np
 import pandas as pd
 import os
+from pathlib import Path
 
 from chromosome import Chrom
 import utils
@@ -229,19 +230,29 @@ def save_fig(outdir, outname):
     plt.savefig(outname+'.png')
     
 def plot_chrom(source, outdir, gif=False):
+    """
+    plot a chromosome from a .inv source
+    """
+    
     chrom, results, ts=utils.parse_inv_file(source)
 
+    # get the file name without the file ending
+    outname=Path(source).stem
+    
     init_plot_style_settings()
 
     if gif:
-        make_dotplot_gif(chrom, outdir, results['t50'])
+        make_dotplot_gif(chrom, outdir, results['t50'], outname)
     else:
         chrom.run(len(chrom.inversion_cuts))
 
-        plot_results(chrom, outdir)
+        plot_results(chrom, outdir, outname)
 
         
-def make_dotplot_gif(chrom, outdir, cycles):
+def make_dotplot_gif(chrom, outdir, cycles, outname):
+    """
+    create an animated GIF of the chromosome's inversion process up to τ50 (max. 1000 frames)
+    """
 
     max_frames=1000
     frames=min(max_frames, cycles)
@@ -258,14 +269,12 @@ def make_dotplot_gif(chrom, outdir, cycles):
 
     animation=ani.FuncAnimation(fig, animate, repeat=True, frames=frames, interval=500)
     
-    animation.save(str(chrom.timestamp)+'.gif', writer='imagemagick')
+    animation.save(outname+'.gif', writer='imagemagick')
 
-def plot_results(chrom, outdir):
+def plot_results(chrom, outdir, outname):
     """
     plot the results of a simulated chromosome
     """
-
-    outname=str(chrom.timestamp)
     
     ## trace figure
 

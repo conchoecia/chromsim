@@ -11,7 +11,7 @@ from chromosome import Chrom
 
 FILE_ENDING=".inv"
         
-def save(chrom, outdir="./"):
+def save(chrom, outdir="./", outname=None):
     """
     save the chromosome in a re-runnable file format
     """
@@ -32,7 +32,7 @@ def save(chrom, outdir="./"):
 
 """
 
-    fname=str(chrom.timestamp)+FILE_ENDING
+    fname=(outname if outname else str(chrom.timestamp))+FILE_ENDING
 
     header=header_format_string.format(ts=chrom.timestamp, Asize=chrom.Asize, Bsize=chrom.Bsize, ws=chrom.window_size, loc=chrom.level_of_convergence, t100=chrom.t100, t50=chrom.t50, tS=chrom.tS, mu=chrom.m_mu, sigma=chrom.m_sigma, AB_convergence=chrom.AB_convergence)
 
@@ -81,7 +81,7 @@ def parse_inv_file(file):
 
         # set up the return values
         ts=head[0]
-chrom=Chrom(Asize=Asize, Bsize=Bsize, level_of_convergence=loc, window_size=ws, inversion_cuts=cuts, timestamp=ts)
+        chrom=Chrom(Asize=Asize, Bsize=Bsize, level_of_convergence=loc, window_size=ws, inversion_cuts=cuts, timestamp=ts)
         results_dict={'t100': t100,
                       't50': t50,
                       'tS': tS,
@@ -127,6 +127,7 @@ def create_parser():
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional)")
     parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (optional)")
+    parser.add_argument('-n', '--filename', type=str, default=None, help="filename for the resulting .inv file (optional)")
 
     # plotting arguments
     parser.add_argument('-P', '--plot', action='store_true', help="plot a chromosome specified by -s")

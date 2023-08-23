@@ -38,10 +38,11 @@ def main():
             raise parser.error("level-of-convergence has to be between 0 and 1")
         cycles=args['cycle_number']
         tpc=args['translocations_per_cycle']
+        outname=args['filename']
 
         chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
         chrom.run(n=cycles, show_output=True)
-        utils.save(chrom, outdir)
+        utils.save(chrom, outdir, outname)
     
     if args['plot']:
         source=args['source']
