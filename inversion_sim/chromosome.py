@@ -10,7 +10,7 @@ def check_AB_pair(AB0, AB1):
     return 0 if AB0[0] == AB1[0] else 1
 
 class Chrom():
-    def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, translocations_per_cycle=0, inversion_cuts=[]):
+    def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, translocations_per_cycle=0, inversion_cuts=[], timestamp=None):
         
         # set parameters
         self.Asize=Asize
@@ -61,7 +61,7 @@ class Chrom():
         self._update_seen(0, len(self.gene_list)-1)
 
         # give this chromosome a timestamp
-        self.timestamp=dt.datetime.now()
+        self.timestamp=timestamp if timestamp else dt.datetime.now()
 
     def __str__(self):
         format_string="""timestamp {ts}

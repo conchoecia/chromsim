@@ -80,15 +80,15 @@ def parse_inv_file(file):
         AB_conv=int(results[5])
 
         # set up the return values
-        chrom=Chrom(Asize=Asize, Bsize=Bsize, level_of_convergence=loc, window_size=ws, inversion_cuts=cuts)
+        ts=head[0]
+chrom=Chrom(Asize=Asize, Bsize=Bsize, level_of_convergence=loc, window_size=ws, inversion_cuts=cuts, timestamp=ts)
         results_dict={'t100': t100,
                       't50': t50,
                       'tS': tS,
                       'mu': mu,
                       'sigma': sigma,
                       'AB_convergence': AB_conv}
-        ts=head[0]
-
+        
         return chrom, results_dict, ts
 
 class FloatRange(abc.Container):
