@@ -264,10 +264,10 @@ def make_dotplot_gif(chrom, outdir, cycles, outname):
     frames=cycles
     step=cycles/frames
 
-    figsize=(10, 10)
+    figsize=(5, 5)
     fig=plt.figure(figsize=figsize)
     global marker_size
-    marker_size/=4
+    marker_size/=8
     ax=fig.add_subplot()
     
     def animate(i):
