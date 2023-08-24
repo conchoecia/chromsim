@@ -48,7 +48,7 @@ def init_plot_style_settings(chrom):
     global text_size
     text_size=20
     global marker_size
-    marker_size=mpl.rcParams['lines.markersize']**2*1000/chrom.size
+    marker_size=mpl.rcParams['lines.markersize']**2*20000/(chrom.size**1.5)
     global A_alpha
     A_alpha   = max(1/chrom.Asize, 0.1)
     global B_alpha
@@ -62,7 +62,7 @@ def set_up_dot_fig(chrom):
     set up all the axes needed for the dotplots in a grid
     """
     
-    figsize=(40, 40)
+    figsize=(20, 20)
     fig=plt.figure(figsize=figsize)
     gs=fig.add_gridspec(2, 2)
     ax0=fig.add_subplot(gs[0, 0])
@@ -141,10 +141,12 @@ def plot_dotplot(chrom, ax, x, y):
             xB_indices.append(x.index(gene))
             yB_indices.append(y.index(gene))
 
-    scatA=ax.scatter(xA_indices, yA_indices, lw=setlw*2, s=marker_size)
-    scatB=ax.scatter(xB_indices, yB_indices, lw=setlw*2, s=marker_size)
-
-    return scatA, scatB
+    ax.scatter(xA_indices, yA_indices, color='blue', lw=setlw*2, s=marker_size)
+    ax.scatter(xA_indices, [0]*len(xA_indices), color='blue', lw=setlw*2, s=marker_size*.5, marker='s')
+    ax.scatter([0]*len(yA_indices), yA_indices, color='blue', lw=setlw*2, s=marker_size*.5, marker='s')
+    ax.scatter(xB_indices, yB_indices, color='red', lw=setlw*2, s=marker_size)
+    ax.scatter(xB_indices, [0]*len(xB_indices), color='red', lw=setlw*2, s=marker_size*.5, marker='s')
+    ax.scatter([0]*len(yB_indices), yB_indices, color='red', lw=setlw*2, s=marker_size*.5, marker='s')
 
 def plot_trace(chrom, trace, ax, lim, color='blue', alpha=0.5):
     """
@@ -266,19 +268,21 @@ def make_dotplot_gif(chrom, outdir, cycles, outname):
     frames=cycles
     step=cycles/frames
 
-    figsize=(5, 5)
+    figsize=(10, 10) if chrom.size <= 400 else (5, 5)
     fig=plt.figure(figsize=figsize)
     global marker_size
     marker_size/=8
     ax=fig.add_subplot()
-    
+
+    last_seen=0
     def animate(i):
         chrom.run(step*i)
         ax.clear()
-        ax.text(0, 1.05, "cycle {:4d}".format(chrom.cycle), transform=ax.transAxes, ha='left', weight='bold')
-        scat0, scat1=plot_dotplot(chrom, ax, chrom.original_gene_list, chrom.gene_list)
-        #return (scat0, scat1)
-
+        nonlocal last_seen
+        ax.text(0, 1.05, r"cycle: {c:4d}, m: {m:.2f}, seen (new): {n}, seen (cumulative): {a}".format(c=chrom.cycle, m=chrom.trace_m[chrom.cycle], n=len(chrom.seen)-last_seen, a=len(chrom.seen)), transform=ax.transAxes, ha='left', weight='bold')
+        last_seen=len(chrom.seen)
+        plot_dotplot(chrom, ax, chrom.original_gene_list, chrom.gene_list)
+        
     animation=ani.FuncAnimation(fig, animate, repeat=True, frames=frames, interval=500)
     
     animation.save(outname+'.gif', writer='imagemagick')
