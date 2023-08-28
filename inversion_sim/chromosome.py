@@ -49,16 +49,24 @@ class Chrom():
         self.converged_BtoA=0 # AB_convergence is achieved
         
         # initialize the traces that cumulatively track how many new interactions are added after each cycle
-        self.trace      = {k:{0:0} for k in self.gene_list}
-        self.trace_AtoB = {k:{0:0} for k in self.gene_list if k.startswith("A")}
-        self.trace_BtoA = {k:{0:0} for k in self.gene_list if k.startswith("B")}
+        self.trace={k:{0:(1 if k == 'A.1' or k == 'B.'+str(self.Bsize+1) else 2)} for k in self.gene_list}
+        self.last_trace_values={k:self.trace[k][0] for k in self.trace}
+        self.trace_mean={0:np.mean(list(self.last_trace_values.values()))}
+
+        self.trace_AtoB={k:{0:(1 if k == 'A.'+str(self.Asize) else 0)} for k in self.gene_list if k.startswith("A")}
+        self.last_trace_AtoB_values={k:self.trace_AtoB[k][0] for k in self.trace_AtoB}
+        self.trace_AtoB_mean={0:np.mean(list(self.last_trace_AtoB_values.values()))}
+
+        self.trace_BtoA={k:{0:(1 if k == 'B.1' else 0)} for k in self.gene_list if k.startswith("B")}
+        self.last_trace_BtoA_values={k:self.trace_BtoA[k][0] for k in self.trace_BtoA}
+        self.trace_BtoA_mean={0:np.mean(list(self.last_trace_BtoA_values.values()))}
 
         # initialize the entropy value trace
         self.trace_m={0:0}
 
         # initialize dictionary of new seen interactions
         self.seen = {} # seen is a list of genes that have already interacted with each other, value is the cycle of the first interaction between the two genes that are the key
-        self._update_seen(0, len(self.gene_list)-1)
+        self._update_seen(0, len(self.gene_list)-1, trace=False)
 
         # give this chromosome a timestamp
         self.timestamp=timestamp if timestamp else dt.datetime.now()
@@ -295,23 +303,32 @@ results:
                         
                         # update the current gene's trace with the current cycle and increment the last entry by 1 => (cycle, number_of_interactions)
                         if self.cycle > 0:
-                            self.trace[this][self.cycle]=self.trace[this][max(self.trace[this].keys())]+1
+                            previous_value=self.last_trace_values[this]
+                            self.trace[this][self.cycle]=previous_value+1
+                            self.last_trace_values[this]=previous_value+1
+                            self.trace_mean[self.cycle]=np.mean([v for v in self.last_trace_values.values()])
 
                         # update inter-group traces with a new interaction
-                        if pair[this_index].startswith("A") and pair[other_index].startswith("B"):
+                        if this.startswith("A") and other.startswith("B"):
                             if self.cycle > 0:
-                                self.trace_AtoB[pair[this_index]][self.cycle]=self.trace_AtoB[this][max(self.trace_AtoB[this].keys())]+1
+                                previous_value=self.last_trace_AtoB_values[this]
+                                self.trace_AtoB[this][self.cycle]=previous_value+1
+                                self.last_trace_AtoB_values[this]=previous_value+1
+                                self.trace_AtoB_mean[self.cycle]=np.mean([v for v in self.last_trace_AtoB_values.values()])
                             # check whether the latest count of cross-group gene interactions for this gene is equal
                             #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
                             # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
                             #   cannot interact with the other telomere)
-                            if self.trace_AtoB[pair[this_index]][self.cycle] == self.Bsize-(1 if pair[this_index].split('.')[1] == '1' else 0):
+                            if self.trace_AtoB[pair[this_index]][self.cycle] == self.Bsize-(1 if this.split('.')[1] == '1' else 0):
                                 self.converged_AtoB+=1
-                        if pair[this_index].startswith("B") and pair[other_index].startswith("A"):
+                        if this.startswith("B") and other.startswith("A"):
                             if self.cycle > 0:
-                                self.trace_BtoA[pair[this_index]][self.cycle]=self.trace_BtoA[this][max(self.trace_BtoA[this].keys())]+1
+                                previous_value=self.last_trace_BtoA_values[this]
+                                self.trace_BtoA[this][self.cycle]=previous_value+1
+                                self.last_trace_BtoA_values[this]=previous_value+1
+                                self.trace_BtoA_mean[self.cycle]=np.mean([v for v in self.last_trace_BtoA_values.values()])
                             # same as above, but for B-to-A
-                            if self.trace_BtoA[pair[this_index]][self.cycle] == self.Asize-(1 if pair[this_index].split('.')[1] == str(self.Bsize) else 0):
+                            if self.trace_BtoA[this][self.cycle] == self.Asize-(1 if this.split('.')[1] == str(self.Bsize) else 0):
                                 self.converged_BtoA+=1
                 
     def _update_m(self, i0, i1):

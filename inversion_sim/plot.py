@@ -147,27 +147,13 @@ def plot_dotplot(chrom, ax, x, y):
     ax.scatter(xB_indices, yB_indices, color='red', lw=setlw*2, s=marker_size)
     ax.scatter(xB_indices, [0]*len(xB_indices), color='red', lw=setlw*2, s=marker_size*.5, marker='s')
     ax.scatter([0]*len(yB_indices), yB_indices, color='red', lw=setlw*2, s=marker_size*.5, marker='s')
-
-def calculate_trace_median(chrom, trace):
-    medians={}
-    interactions_at_i=[]
-    for i in range(chrom.cycle):
-        interactions_at_i_minus_1=interactions_at_i
-        interactions_at_i=[]
-        for k in trace:
-            interactions_at_i.append(trace[k][i] if i in trace[k].keys() else interactions_at_i_minus_1[len(interactions_at_i)])
-            medians[i]=np.median(interactions_at_i)
-
-    return medians
     
-def plot_trace(chrom, trace, lim, ax, medians, color='blue', alpha=0.5):
+def plot_trace(chrom, trace, lim, ax, mean, color='blue', alpha=0.5):
     """
     plot trace dictionary on the given axes in the interval [0, lim]
     """
 
     # plot all the individual traces
-    # at the same time collect them into a single combined trace
-    #combined=[]
     for k in trace:
         x, y= [], []
         for cycle in trace[k]:
@@ -175,31 +161,18 @@ def plot_trace(chrom, trace, lim, ax, medians, color='blue', alpha=0.5):
                 break
             x.append(cycle)
             y.append(trace[k][cycle])
-            #combined.append(tup)
         ax.plot(x, y, color=color, lw = setlw, alpha=alpha)
 
-    #combined.sort()
-
-    # define a callable for scipy to fit
-    #def curve(x, a, b, c):
-    #    return a*(1-np.exp(-b*x))+c
-
-    # fit the callable  to the combined traces
-    #x_fit, y_raw=[], []
-    #for tup in combined:
-    #    x_fit.append(tup[0])
-    #    y_raw.append(tup[1])
-    #params=opt.curve_fit(curve, x_fit, y_raw)[0]
-    #y_fit=[curve(el, params[0], params[1], params[2]) for el in x_fit]
-
-
+    # get the x and y lists from mean
     x, y=[], []
-    for k in medians:
-        x.append(k)
-        y.append(medians[k])
-
+    for cycle in mean:
+        if cycle >= lim:
+            break
+        x.append(cycle)
+        y.append(mean[cycle])
+        
     # plot the fitted data
-    ax.plot(x[:lim], y[:lim], color=color, lw = setlw*10, alpha=0.75)
+    ax.plot(x, y, color=color, lw = setlw*10, alpha=0.75)
 
 def plot_t50(chrom, ax):
     """
@@ -321,21 +294,13 @@ def plot_results(chrom, outdir, outname):
     # set up the fig
     fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
 
-    # calculate medians
-    print("medians")
-    medians=calculate_trace_median(chrom, chrom.trace)
-    print("medians AtoB")
-    medians_AtoB=calculate_trace_median(chrom, chrom.trace_AtoB)
-    print("medians BtoA")
-    medians_BtoA=calculate_trace_median(chrom, chrom.trace_BtoA)
-
     # plot traces
-    plot_trace(chrom, chrom.trace, lim, ax0, medians, 'black', all_alpha)
-    plot_trace(chrom, chrom.trace, m_lim, ax3, medians, 'black', all_alpha)
-    plot_trace(chrom, chrom.trace_AtoB, lim, ax0, medians_AtoB, 'red', A_alpha)
-    plot_trace(chrom, chrom.trace_AtoB, m_lim, ax3, medians_AtoB, 'red', A_alpha)
-    plot_trace(chrom, chrom.trace_BtoA, lim, ax0, medians_BtoA, 'blue', B_alpha)
-    plot_trace(chrom, chrom.trace_BtoA, m_lim, ax3, medians_BtoA, 'blue', B_alpha)  
+    plot_trace(chrom, chrom.trace, lim, ax0, chrom.trace_mean, 'black', all_alpha)
+    plot_trace(chrom, chrom.trace, m_lim, ax3, chrom.trace_mean, 'black', all_alpha)
+    plot_trace(chrom, chrom.trace_AtoB, lim, ax0, chrom.trace_AtoB_mean, 'red', A_alpha)
+    plot_trace(chrom, chrom.trace_AtoB, m_lim, ax3, chrom.trace_AtoB_mean, 'red', A_alpha)
+    plot_trace(chrom, chrom.trace_BtoA, lim, ax0, chrom.trace_BtoA_mean, 'blue', B_alpha)
+    plot_trace(chrom, chrom.trace_BtoA, m_lim, ax3, chrom.trace_BtoA_mean, 'blue', B_alpha)  
 
     plot_t50(chrom, ax0)
     plot_m(chrom, ax1, ax2)
