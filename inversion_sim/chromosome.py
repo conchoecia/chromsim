@@ -49,9 +49,9 @@ class Chrom():
         self.converged_BtoA=0 # AB_convergence is achieved
         
         # initialize the traces that cumulatively track how many new interactions are added after each cycle
-        self.trace      = {k:[(0, 0)] for k in self.gene_list}
-        self.trace_AtoB = {k:[(0, 0)] for k in self.gene_list if k.startswith("A")}
-        self.trace_BtoA = {k:[(0, 0)] for k in self.gene_list if k.startswith("B")}
+        self.trace      = {k:{0:0} for k in self.gene_list}
+        self.trace_AtoB = {k:{0:0} for k in self.gene_list if k.startswith("A")}
+        self.trace_BtoA = {k:{0:0} for k in self.gene_list if k.startswith("B")}
 
         # initialize the entropy value trace
         self.trace_m={0:0}
@@ -283,26 +283,35 @@ results:
                     # udpate seen with the current cycle
                     self.seen[pair]=self.cycle
 
+                    # skip the following steps if trace is False
+                    if not trace:
+                        continue
                     # update trace structure for both genes in the tuple
-                    for pair_index in [0,1]:
-                        other=1 if pair_index == 0 else 0
+                    for this_index in [0,1]:
+                        other_index=1 if this_index == 0 else 0
 
+                        this=pair[this_index]
+                        other=pair[other_index]
+                        
                         # update the current gene's trace with the current cycle and increment the last entry by 1 => (cycle, number_of_interactions)
-                        self.trace[pair[pair_index]].append((self.cycle, self.trace[pair[pair_index]][-1][1]+1))
+                        if self.cycle > 0:
+                            self.trace[this][self.cycle]=self.trace[this][max(self.trace[this].keys())]+1
 
                         # update inter-group traces with a new interaction
-                        if pair[pair_index].startswith("A") and pair[other].startswith("B"):
-                            self.trace_AtoB[pair[pair_index]].append((self.cycle, self.trace_AtoB[pair[pair_index]][-1][1]+1)) #.[-1] += 1
+                        if pair[this_index].startswith("A") and pair[other_index].startswith("B"):
+                            if self.cycle > 0:
+                                self.trace_AtoB[pair[this_index]][self.cycle]=self.trace_AtoB[this][max(self.trace_AtoB[this].keys())]+1
                             # check whether the latest count of cross-group gene interactions for this gene is equal
                             #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
                             # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
                             #   cannot interact with the other telomere)
-                            if self.trace_AtoB[pair[pair_index]][-1][1] == self.Bsize-(1 if pair[pair_index].split('.')[1] == '1' else 0):
+                            if self.trace_AtoB[pair[this_index]][self.cycle] == self.Bsize-(1 if pair[this_index].split('.')[1] == '1' else 0):
                                 self.converged_AtoB+=1
-                        if pair[pair_index].startswith("B") and pair[other].startswith("A"):
-                            self.trace_BtoA[pair[pair_index]].append((self.cycle, self.trace_BtoA[pair[pair_index]][-1][1]+1)) #[-1] += 1
+                        if pair[this_index].startswith("B") and pair[other_index].startswith("A"):
+                            if self.cycle > 0:
+                                self.trace_BtoA[pair[this_index]][self.cycle]=self.trace_BtoA[this][max(self.trace_BtoA[this].keys())]+1
                             # same as above, but for B-to-A
-                            if self.trace_BtoA[pair[pair_index]][-1][1] == self.Asize-(1 if pair[pair_index].split('.')[1] == str(self.Bsize) else 0):
+                            if self.trace_BtoA[pair[this_index]][self.cycle] == self.Asize-(1 if pair[this_index].split('.')[1] == str(self.Bsize) else 0):
                                 self.converged_BtoA+=1
                 
     def _update_m(self, i0, i1):
