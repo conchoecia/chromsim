@@ -99,7 +99,7 @@ results:
 
         return self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
 
-    def run(self, n=-1, show_output=False):
+    def run(self, n=-1, show_output=False, trace=True):
         """
         run the simulation for n iterations, or until convergence if n < 0
 
@@ -111,7 +111,7 @@ results:
             if show_output and self.cycle%100 == 0:
                 self._print_progress(n)
                 
-            self._shuffle()
+            self._shuffle(trace)
             
             if self.t50 < 0 and len(self.seen) >= self.converging_at/2:
                 self.t50=self.cycle
@@ -216,7 +216,7 @@ results:
             gene=self.gene_list.pop(i0)
             self.gene_list.insert(i1, gene)
             
-    def _shuffle(self):
+    def _shuffle(self, trace):
         """
         invert chromosome and translocate genes
 
@@ -225,7 +225,7 @@ results:
 
         self._invert()
         # self._transpose_genes()
-        self._update_cycle(self.inversion_cuts[-1])
+        self._update_cycle(self.inversion_cuts[-1], trace)
 
     def _invert(self):
         """
@@ -247,7 +247,7 @@ results:
         # the max and min operations make sure that there is no out-of-bounds action going on
         return max(i-self.window_size, 0), min(i+self.window_size, len(self.gene_list)-1)
         
-    def _update_cycle(self, cut):
+    def _update_cycle(self, cut, trace):
         """
         prepare and execute updates of seen and m (only in the window around the breakpoints of cut)
         """
@@ -260,14 +260,14 @@ results:
 
         # update seen around i0 and i1
         start, end=self._get_window(i0)
-        self._update_seen(start, end)
+        self._update_seen(start, end, trace)
         start, end=self._get_window(i1)
-        self._update_seen(start, end)
+        self._update_seen(start, end, trace)
 
         # update m around i0 and i1
         self._update_m(i0, i1)
         
-    def _update_seen(self, start, end):
+    def _update_seen(self, start, end, trace):
         """
         update the seen list and trace structures
         """

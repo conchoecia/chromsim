@@ -41,7 +41,7 @@ def main():
         outname=args['filename']
 
         chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
-        chrom.run(n=cycles, show_output=True)
+        chrom.run(n=cycles, show_output=True, trace=False)
         utils.save(chrom, outdir, outname)
     
     if args['plot']:
