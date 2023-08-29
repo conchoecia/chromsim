@@ -28,8 +28,11 @@ def main():
     if args['simulate']:
         Asize=args['asize']
         Bsize=args['bsize']
-        m=-1
         
+        m=-1
+        a=-1
+        b=-1
+        c=-1
         rbh_file=args['rbh']
         if rbh_file:
             a=args['group_a']
@@ -37,7 +40,6 @@ def main():
             c=args['chromosome']
 
             Asize, Bsize, m=utils.from_rbh(rbh_file, a, b, c)
-            print(m)
             if not args['find_m']:
                 m=-1
             
@@ -55,7 +57,9 @@ def main():
 
         chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
         chrom.run(n=cycles, m=m, show_output=True, trace=False)
-        utils.save(chrom, outdir, outname)
+        utils.save_inv(chrom, outdir, outname)
+        if rbh_file and args['find_m']:
+            utils.save_mc(chrom, rbh_file, c, a, b, m, outdir=outdir)
     
     if args['plot']:
         source=args['source']

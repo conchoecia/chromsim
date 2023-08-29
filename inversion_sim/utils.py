@@ -7,11 +7,31 @@ import collections.abc as abc
 import argparse as ap
 import pandas as pd
 from datetime import datetime as dt
+from pathlib import Path
 from chromosome import Chrom
 
-FILE_ENDING=".inv"
-        
-def save(chrom, outdir="./", outname=None):
+CHROM_STORAGE_FILE_ENDING='.inv'
+M_CYCLES_FILE_ENDING='.mc'
+
+def save_mc(chrom, rbh_file, chromosome, group_a, group_b, m, outdir='./'):
+    fname=Path(rbh_file).stem
+
+    if not os.path.exists(outdir+fname+M_CYCLES_FILE_ENDING):
+        header="""# {}
+
+fwm_event\torganism\tscaf\tAsize\tBsize\tm\tcycles\n""".format(fname+'.rbh')
+        with open(outdir+fname+M_CYCLES_FILE_ENDING, 'w') as f:
+            f.write(header)
+
+    with open(outdir+fname+M_CYCLES_FILE_ENDING, 'a') as f:
+        line_format_string='{fwm}\t{org}\t{scaf}\t{a}\t{b}\t{m:.3f}\t{cyc}\n'
+        line=line_format_string.format(fwm=get_fwm_string(group_a, group_b), org=chromosome[0:3], scaf=chromosome, a=chrom.Asize, b=chrom.Bsize, m=m, cyc=chrom.cycle)
+        f.writelines(line)
+
+def get_fwm_string(group_a, group_b):
+    return group_a+'(x)'+group_b
+
+def save_inv(chrom, outdir='./', outname=None):
     """
     save the chromosome in a re-runnable file format
     """
@@ -32,7 +52,7 @@ def save(chrom, outdir="./", outname=None):
 
 """
 
-    fname=(outname if outname else str(chrom.timestamp))+FILE_ENDING
+    fname=(outname if outname else str(chrom.timestamp))+CHROM_STORAGE_FILE_ENDING
 
     header=header_format_string.format(ts=chrom.timestamp, Asize=chrom.Asize, Bsize=chrom.Bsize, ws=chrom.window_size, loc=chrom.level_of_convergence, t100=chrom.t100, t50=chrom.t50, tS=chrom.tS, mu=chrom.m_mu, sigma=chrom.m_sigma, AB_convergence=chrom.AB_convergence)
 
