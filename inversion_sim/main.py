@@ -28,6 +28,19 @@ def main():
     if args['simulate']:
         Asize=args['asize']
         Bsize=args['bsize']
+        m=-1
+        
+        rbh_file=args['rbh']
+        if rbh_file:
+            a=args['group_a']
+            b=args['group_b']
+            c=args['chromosome']
+
+            Asize, Bsize, m=utils.from_rbh(rbh_file, a, b, c)
+            print(m)
+            if not args['find_m']:
+                m=-1
+            
         if Asize <= 0 or Bsize <= 0:
             raise parser.error("Asize and Bsize have to be specified and be > 0")
         wsize=args['window_size']
@@ -41,7 +54,7 @@ def main():
         outname=args['filename']
 
         chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
-        chrom.run(n=cycles, show_output=True, trace=False)
+        chrom.run(n=cycles, m=m, show_output=True, trace=False)
         utils.save(chrom, outdir, outname)
     
     if args['plot']:

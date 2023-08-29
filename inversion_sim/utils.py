@@ -5,7 +5,7 @@ This file contains various utility functions for the program, like plotting and 
 import os
 import collections.abc as abc
 import argparse as ap
-import glob
+import pandas as pd
 from datetime import datetime as dt
 from chromosome import Chrom
 
@@ -91,6 +91,42 @@ def parse_inv_file(file):
         
         return chrom, results_dict, ts
 
+def from_rbh(path, group_a, group_b, chromosome):
+    organism=chromosome[0:3]
+    df=pd.read_csv(path, sep='\t').filter(items=['gene_group', organism+'_scaf', organism+'_pos'])
+    df=df[df[organism+'_scaf'] == chromosome]
+    df_a=df[df['gene_group'] == group_a]
+    df_b=df[df['gene_group'] == group_b]
+
+    chromset={}
+    df_a.reset_index()
+    for index, row in df_a.iterrows():
+        chromset[row[organism+'_pos']]='A'
+    df_b.reset_index()
+    for index, row in df_b.iterrows():
+        chromset[row[organism+'_pos']]='B'
+
+    chromstring=''
+    for pos in sorted(chromset):
+        chromstring+=chromset[pos]
+
+    m=calculate_m(chromstring)
+    
+    Asize=df_a.size
+    Bsize=df_b.size
+
+    return Asize, Bsize, m
+
+def calculate_m(chromstring):
+    a=chromstring.count('A')
+    b=chromstring.count('B')
+    ab=chromstring.count('AB')
+    ba=chromstring.count('BA')
+
+    m=(ab+ba-1)/(2*a*b/(a+b)-1)
+
+    return m
+    
 class FloatRange(abc.Container):
 
     def __init__(self, lower, upper, step=0.01):
@@ -119,17 +155,22 @@ def create_parser():
     """
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
 
-    # simulation arguments
+    # simulation
     parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -c, -l, -w, and -t")
     parser.add_argument('-a', '--asize', type=int, default=-1, help="integer value for the number of genes in group A")
     parser.add_argument('-b', '--bsize', type=int, default=-1, help="integer value for the number of genes in group B")
-    parser.add_argument('-c', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional)")
-    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 10), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
+    parser.add_argument('-n', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional)")
+    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 1), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional)")
     parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (optional)")
-    parser.add_argument('-n', '--filename', type=str, default=None, help="filename for the resulting .inv file (optional)")
-
-    # plotting arguments
+    parser.add_argument('-f', '--filename', type=str, default=None, help="filename for the resulting .inv file (optional)")
+    parser.add_argument('-r', '--rbh', type=str, default=None, help="filename of a .rbh file to read data from (optional)")
+    parser.add_argument('-M', '--find-m', action='store_true', help="stop the simulation run when the entropy value from the .rbh file has been reached (optional)")
+    parser.add_argument('-x', '--group-a', type=str, default=None, help="the ALG to be used as group A (required for --rbh)")
+    parser.add_argument('-y', '--group-b', type=str, default=None, help="the ALG to be used as group B (required for --rbh)")
+    parser.add_argument('-c', '--chromosome', type=str, default=None, help="name of the chromosome (or scaffold) where the two groups are mixed")
+    
+    # plotting
     parser.add_argument('-P', '--plot', action='store_true', help="plot a chromosome specified by -s")
     parser.add_argument('-s', '--source', type=str, help="the .inv file to load")
     parser.add_argument('-G', '--gif', action='store_true', help="create an animated GIF of the simulation process")

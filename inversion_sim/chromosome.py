@@ -100,22 +100,25 @@ results:
         
         print("\rcycle {cycle:15d} {progress:.2f}%".format(cycle=self.cycle, progress=(self.cycle/n if n >= 0 else len(self.seen)/self.converging_at)*100), end="")
 
-    def _quit_condition(self, n):
+    def _quit_condition(self, n, m):
         """
-        return True or False depending on whether the condition to end the simulation is met (convergence/cycles)
+        return True or False depending on whether the condition to end the simulation is met (convergence/cycles/m)
         """
 
-        return self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
+        return self.trace_m[self.cycle] >= m if m >= 0 else self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
 
-    def run(self, n=-1, show_output=False, trace=True):
+    def run(self, n=-1, m=-1, show_output=False, trace=True):
         """
         run the simulation for n iterations, or until convergence if n < 0
 
         print progress report to the console if show_output is True
         """
 
+        if n >= 0 and m >= 0:
+            raise Exception('n and m cannot both be specified for a simulation run.')
+        
         # run the simulation for the specified number of iterations/until convergence
-        while not self._quit_condition(n):
+        while not self._quit_condition(n, m):
             if show_output and self.cycle%100 == 0:
                 self._print_progress(n)
                 
