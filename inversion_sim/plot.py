@@ -11,15 +11,6 @@ from pathlib import Path
 from chromosome import Chrom
 import utils
 
-def get_output_name(chrom):
-    """
-    return a string to be used as the base for saving logs
-
-    TODO: will be redundant with the new log file format
-    """
-    
-    return 'inversion_sim_A{Asize}-B{Bsize}_l{loc}_w{wsize}'.format(Asize=chrom.genesA, Bsize=chrom.Bsize, loc=chrom.level_of_convergence, wsize=chrom.window_size)
-
 def init_plot_style_settings(chrom):
     """
     set the global values for text sizes, colors, etc. to be used in plots

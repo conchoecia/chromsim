@@ -69,27 +69,7 @@ class Chrom():
         self._update_seen(0, len(self.gene_list)-1, trace=False)
 
         # give this chromosome a timestamp
-        self.timestamp=timestamp if timestamp else dt.datetime.now()
-
-    def __str__(self):
-        format_string="""timestamp {ts}
-params:
- Asize {Asize}
- Bsize {Bsize}
- window_size {ws}
- level_of_convergence {loc:.2f}
-results:
- t100 {t100}
- t50 {t50}
- tS {tS}
- mu {mu:.2f}
- sigma {sigma:.2f}
- AB_convergence {AB_convergence}"""
-
-        ret=format_string.format(ts=self.timestamp, Asize=self.Asize, Bsize=self.Bsize, ws=self.window_size, loc=self.level_of_convergence, t100=self.t100, t50=self.t50, tS=self.tS, mu=self.m_mu, sigma=self.m_sigma, AB_convergence=self.AB_convergence)
-
-        return ret
-    
+        self.timestamp=timestamp if timestamp else dt.datetime.now()    
 
     def _print_progress(self, n):
         """
@@ -109,7 +89,7 @@ results:
 
     def run(self, n=-1, m=-1, show_output=False, trace=True):
         """
-        run the simulation for n iterations, or until convergence if n < 0
+        run the simulation for n iterations, until a given m is reached, or until convergence if n,m < 0
 
         print progress report to the console if show_output is True
         """
@@ -281,6 +261,9 @@ results:
     def _update_seen(self, start, end, trace):
         """
         update the seen list and trace structures
+
+        start/end: indices demarking the window where the previous changes are relevant
+        trace: boolean value specifying whether or not to save data to the trace structures
         """
 
         # iterate over all genes between start and end

@@ -14,8 +14,16 @@ CHROM_STORAGE_FILE_ENDING='.inv'
 M_CYCLES_FILE_ENDING='.mc'
 
 def save_mc(chrom, rbh_file, chromosome, group_a, group_b, m, outdir='./'):
+    """
+    save the results of an rbh-based simulation that has run until the observed entropy was reached
+
+    appends a line to a .mc file with the same name as rbh_file, or creates it if it does not exist yet
+    """
+
+    # get the file name without the .rbh ending
     fname=Path(rbh_file).stem
 
+    # create the .mc file if it does not exist yet, and fill it with the header
     if not os.path.exists(outdir+fname+M_CYCLES_FILE_ENDING):
         header="""# {}
 
@@ -23,12 +31,19 @@ fwm_event\torganism\tscaf\tAsize\tBsize\tm\tcycles\n""".format(fname+'.rbh')
         with open(outdir+fname+M_CYCLES_FILE_ENDING, 'w') as f:
             f.write(header)
 
+    # open the .mc file and append the given data
     with open(outdir+fname+M_CYCLES_FILE_ENDING, 'a') as f:
         line_format_string='{fwm}\t{org}\t{scaf}\t{a}\t{b}\t{m:.3f}\t{cyc}\n'
         line=line_format_string.format(fwm=get_fwm_string(group_a, group_b), org=chromosome[0:3], scaf=chromosome, a=chrom.Asize, b=chrom.Bsize, m=m, cyc=chrom.cycle)
         f.writelines(line)
 
 def get_fwm_string(group_a, group_b):
+    """
+    combine the names of the two groups into one string representing the fwm event
+
+    e.g. B1(x)B2
+    """
+    
     return group_a+'(x)'+group_b
 
 def save_inv(chrom, outdir='./', outname=None):
