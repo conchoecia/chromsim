@@ -52,10 +52,9 @@ def main():
         if not loc in range(1, Asize+Bsize+1):
             raise parser.error("level-of-convergence has to be between 0 and 1")
         cycles=args['cycle_number']
-        tpc=args['translocations_per_cycle']
         outname=args['filename']
 
-        chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize, translocations_per_cycle=tpc)
+        chrom=Chrom(Asize, Bsize, level_of_convergence=loc, window_size=wsize)
         chrom.run(n=cycles, m=m, show_output=True, trace=False)
         utils.save_inv(chrom, outdir, outname)
         if rbh_file and args['find_m']:

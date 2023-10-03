@@ -10,7 +10,7 @@ def check_AB_pair(AB0, AB1):
     return 0 if AB0[0] == AB1[0] else 1
 
 class Chrom():
-    def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, translocations_per_cycle=0, inversion_cuts=[], timestamp=None):
+    def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, inversion_cuts=[], timestamp=None):
         
         # set parameters
         self.Asize=Asize
@@ -18,7 +18,6 @@ class Chrom():
         self.size=self.Asize+self.Bsize
         self.length=length
         self.level_of_convergence=level_of_convergence
-        self.translocations_per_cycle=translocations_per_cycle
         self.window_size=window_size
 
         # set the initial list of cuts
@@ -163,11 +162,9 @@ class Chrom():
             conv+=i
         return conv-1
 
-    def _pick_cut(self, type=""):
+    def _pick_cut(self):
         """
         return a tuple of indices that represent the breakpoints of the next inversion
-
-        type specifies if the cut is for 'inversion' or 'translocation'
         """
 
         if self.cycle < len(self.inversion_cuts):
@@ -176,19 +173,19 @@ class Chrom():
         valid=False
         while not valid:
             cut=(random.randint(1, len(self.gene_list)-1), random.randint(1, len(self.gene_list)-1))
-            valid=self._validate_cut(cut, type)
+            valid=self._validate_cut(cut)
         return cut
 
-    def _validate_cut(self, cut, type):
+    def _validate_cut(self, cut):
         """
         check whether the two breakpoints chosen should be rejected or not
-        type specifies if the cut is for 'inversion' or 'translocation'
 
         no rules are imposed currently, returns True
         """
         
         return True
-    
+
+        # discard the cut if a random number is above 1/(i0-i1) => longer inversions are less likely
         import random as r
         distance=abs(cut[1]-cut[0])
         if distance == 0:
@@ -196,26 +193,13 @@ class Chrom():
         cutoff=1/distance
         rand=r.random()
         return rand <= cutoff
-
-    def _transpose_genes(self):
-        """
-        translocate translocations_per_cycle genes within the gene list
-        """
-
-        for i in range(self.translocations_per_cycle):
-            i0, i1=self.pick_cut()
-            gene=self.gene_list.pop(i0)
-            self.gene_list.insert(i1, gene)
             
     def _shuffle(self, trace):
         """
-        invert chromosome and translocate genes
-
-        translocations are not currently done, as they are not implemented with the new _update_cycle process
+        invert a random chromosome section
         """
 
         self._invert()
-        # self._transpose_genes()
         self._update_cycle(self.inversion_cuts[-1], trace)
 
     def _invert(self):

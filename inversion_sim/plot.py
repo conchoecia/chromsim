@@ -311,7 +311,7 @@ def plot_results(chrom, outdir, outname):
     half_time_genes=chrom.t50_gene_list
 
     # rerun the chromosome until tS to get the list at that point
-    ts_chrom=Chrom(chrom.Asize, chrom.Bsize, chrom.level_of_convergence, chrom.window_size, chrom.translocations_per_cycle, chrom.inversion_cuts)
+    ts_chrom=Chrom(chrom.Asize, chrom.Bsize, chrom.level_of_convergence, chrom.window_size, chrom.inversion_cuts)
     ts_chrom.run(n=chrom.tS, show_output=False)
     entropy_genes=ts_chrom.gene_list
 

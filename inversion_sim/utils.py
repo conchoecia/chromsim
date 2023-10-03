@@ -197,7 +197,6 @@ def create_parser():
     parser.add_argument('-n', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional)")
     parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 1), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
     parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional)")
-    parser.add_argument('-t', '--translocations-per-cycle', type=int, default=0, help="integer value for the number of translocations to be done in addition to inversion each cycle (optional)")
     parser.add_argument('-f', '--filename', type=str, default=None, help="filename for the resulting .inv file (optional)")
     parser.add_argument('-r', '--rbh', type=str, default=None, help="filename of a .rbh file to read data from (optional)")
     parser.add_argument('-M', '--find-m', action='store_true', help="stop the simulation run when the entropy value from the .rbh file has been reached (optional)")
