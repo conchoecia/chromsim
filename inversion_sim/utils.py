@@ -188,20 +188,21 @@ def create_parser():
     """
     creates an argparse parser for the CLI arguments
     """
-    parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of A and B genes")
+    parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of genes assigned to linkage groups denoted by A and B.")
 
     # simulation
     parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -c, -l, -w, and -t")
     parser.add_argument('-a', '--asize', type=int, default=-1, help="integer value for the number of genes in group A")
     parser.add_argument('-b', '--bsize', type=int, default=-1, help="integer value for the number of genes in group B")
-    parser.add_argument('-n', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional)")
-    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 1), default=1, help="fraction of possible gene interactions to wait for if converging (optional)")
-    parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional)")
-    parser.add_argument('-f', '--filename', type=str, default=None, help="filename for the resulting .inv file (optional)")
+    parser.add_argument('-n', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional, run until converged if omitted)")
+    parser.add_argument('-l', '--level-of-convergence', type=float, metavar='LOC', choices=FloatRange(0, 1), default=1, help="fraction of possible gene interactions to wait for if converging (optional, default is 1)")
+    parser.add_argument('-w', '--window-size', type=int, default=1, help="the size of the window to the left and right of each gene to count as interaction after each cycle (optional, default is 1)")
+    parser.add_argument('-f', '--filename', type=str, default=None, help="filename for the resulting .inv file (without file ending) (optional, use timestamp if omitted)")
+    
     parser.add_argument('-r', '--rbh', type=str, default=None, help="filename of a .rbh file to read data from (optional)")
-    parser.add_argument('-M', '--find-m', action='store_true', help="stop the simulation run when the entropy value from the .rbh file has been reached (optional)")
-    parser.add_argument('-x', '--group-a', type=str, default=None, help="the ALG to be used as group A (required for --rbh)")
-    parser.add_argument('-y', '--group-b', type=str, default=None, help="the ALG to be used as group B (required for --rbh)")
+    parser.add_argument('-M', '--find-m', action='store_true', help="stop the simulation run when the entropy value found in the .rbh file has been reached (optional, run until convergence if omitted)")
+    parser.add_argument('-A', '--group-a', type=str, default=None, help="the ALG in the .rbh file to be used as group A (required for --rbh)")
+    parser.add_argument('-B', '--group-b', type=str, default=None, help="the ALG in the .rbh file to be used as group B (required for --rbh)")
     parser.add_argument('-c', '--chromosome', type=str, default=None, help="name of the chromosome (or scaffold) where the two groups are mixed")
     
     # plotting
