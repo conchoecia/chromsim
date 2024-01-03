@@ -217,8 +217,8 @@ def save_fig(outdir, outname):
     """
                 
     # save this as a pdf and png
-    plt.savefig(outname+'.pdf')
-    plt.savefig(outname+'.png')
+    plt.savefig(outdir+outname+'.pdf')
+    plt.savefig(outdir+outname+'.png')
     
 def plot_chrom(source, outdir, gif=False):
     """
