@@ -148,7 +148,7 @@ def plot_trace(chrom, trace, lim, ax, mean, color='blue', alpha=0.5):
     for k in trace:
         x, y= [], []
         for cycle in trace[k]:
-            if cycle > lim:
+            if cycle >= lim:
                 break
             x.append(cycle)
             y.append(trace[k][cycle])
@@ -279,8 +279,8 @@ def plot_results(chrom, outdir, outname):
     ## trace figure
 
     # calculate the upper bounds up to which should be plotted
-    m_lim=(chrom.tS*2)
-    lim=(chrom.t100)
+    m_lim=chrom.tS*2+1
+    lim=chrom.t100+1
 
     # set up the fig
     fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)

@@ -84,7 +84,7 @@ class Chrom():
         return True or False depending on whether the condition to end the simulation is met (convergence/cycles/m)
         """
 
-        return self.trace_m[self.cycle] >= m if m >= 0 else self.cycle >= n if n >= 0 else len(self.seen)/self.converging_at >= self.level_of_convergence
+        return self.trace_m[self.cycle] >= m if m >= 0 else self.cycle >= n if n >= 0 else len(self.seen) >= self.level_of_convergence*self.converging_at
 
     def run(self, n=-1, m=-1, show_output=False, trace=True):
         """
@@ -112,7 +112,7 @@ class Chrom():
             if self.t50 >= 0 and self.AB_convergence < 0:
                 if self.converged_AtoB >= self.Asize and self.converged_BtoA >= self.Bsize:
                     self.AB_convergence=self.cycle
-            
+
         if show_output:
             # show the progress bar with 100% completion
             self._print_progress(n)
