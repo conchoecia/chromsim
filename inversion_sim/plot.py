@@ -39,7 +39,7 @@ def init_plot_style_settings(chrom):
     global text_size
     text_size=20
     global marker_size
-    marker_size=mpl.rcParams['lines.markersize']**2*20000/(chrom.size**1.5)
+    marker_size=1000/chrom.size
     global A_alpha
     A_alpha   = max(1/chrom.Asize, 0.1)
     global B_alpha
