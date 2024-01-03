@@ -194,7 +194,7 @@ def plot_m(chrom, ax_m, ax_norm):
     normpdf/=max(normpdf)
     upper_bound=chrom.m_mu+1.96*chrom.m_sigma
     lower_bound=chrom.m_mu-1.96*chrom.m_sigma
-        
+    
     ax_m.plot(cycles[:chrom.tS*2+1], m_values[:chrom.tS*2+1], lw=setlw*2, color='blue', label=r"$m$")
     
     # plot 95 percentile of m value normal distribution
@@ -295,7 +295,7 @@ def plot_results(chrom, outdir, outname):
 
     plot_t50(chrom, ax0)
     plot_m(chrom, ax1, ax2)
-
+    
     # set legends
     ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
     ax2.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
@@ -311,7 +311,7 @@ def plot_results(chrom, outdir, outname):
     half_time_genes=chrom.t50_gene_list
 
     # rerun the chromosome until tS to get the list at that point
-    ts_chrom=Chrom(chrom.Asize, chrom.Bsize, chrom.level_of_convergence, chrom.window_size, chrom.inversion_cuts)
+    ts_chrom=Chrom(chrom.Asize, chrom.Bsize, level_of_convergence=chrom.level_of_convergence, window_size=chrom.window_size, inversion_cuts=chrom.inversion_cuts)
     ts_chrom.run(n=chrom.tS, show_output=False)
     entropy_genes=ts_chrom.gene_list
 

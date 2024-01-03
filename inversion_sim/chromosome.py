@@ -11,7 +11,7 @@ def check_AB_pair(AB0, AB1):
 
 class Chrom():
     def __init__(self, Asize, Bsize, length=0, level_of_convergence=1, window_size=1, inversion_cuts=[], timestamp=None):
-        
+
         # set parameters
         self.Asize=Asize
         self.Bsize=Bsize
@@ -249,13 +249,17 @@ class Chrom():
         start/end: indices demarking the window where the previous changes are relevant
         trace: boolean value specifying whether or not to save data to the trace structures
         """
-
+        
         # iterate over all genes between start and end
         for gene_index in range(start, end):
+            gene0=self.gene_list[gene_index]
+            
             # iterate over all following genes to compare to the current one
             for comparing_gene_index in range(gene_index+1, min(end+1, gene_index+self.window_size+1)):
                 # group the two genes in a tuple
-                pair=tuple(sorted([self.gene_list[gene_index], self.gene_list[comparing_gene_index]]))
+                gene1=self.gene_list[comparing_gene_index]
+                pair=tuple(sorted([gene0, gene1]))
+                
                 # update data structures if the pairing is new
                 if pair not in self.seen:
                     # udpate seen with the current cycle
