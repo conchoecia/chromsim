@@ -5,12 +5,14 @@ This file contains various utility functions for the program, like plotting and 
 import os
 import collections.abc as abc
 import argparse as ap
+import numpy as np
 import pandas as pd
 from datetime import datetime as dt
 from pathlib import Path
 from chromosome import Chrom
 
 CHROM_STORAGE_FILE_ENDING='.inv'
+META_FILE_ENDING='.minv'
 M_CYCLES_FILE_ENDING='.mc'
 
 def save_mc(chrom, rbh_file, chromosome, group_a, group_b, m, outdir='./'):
@@ -46,6 +48,61 @@ def get_fwm_string(group_a, group_b):
     
     return group_a+'(x)'+group_b
 
+def collect_minv(outdir='./', outname=None):
+    """
+    collect data from all .inv files in outdir and bundle them in a meta-inv (.minv) file
+    """
+
+    section_format_string="""## Asize:{Asize} Bsize:{Bsize} window:{window}
+n={n}
+tS_avg={tS_avg}
+tS_stdev={tS_stdev}
+t50_avg={t50_avg}
+t50_stdev={t50_stdev}
+
+"""
+
+    path=Path(outdir)
+    files=list(path.glob('*.inv'))
+
+    dict={}
+    
+    for file in files:
+        chrom, results, ts=parse_inv_file(file)
+        
+        key='{Asize}:{Bsize}-{window}'.format(Asize=chrom.Asize, Bsize=chrom.Bsize, window=chrom.window_size)
+        
+        if key in dict:
+            dict[key]['tS'].append(results['tS'])
+            dict[key]['t50'].append(results['t50'])
+        else:
+            value={
+                'Asize': chrom.Asize,
+                'Bsize': chrom.Bsize,
+                'window': chrom.window_size,
+                'tS': [results['tS']],
+                't50': [results['t50']]}
+            dict[key]=value
+
+    fname=(outname if outname else str(chrom.timestamp))+META_FILE_ENDING
+    with open(outdir+fname, 'w') as f:
+        for key in dict:
+            value=dict[key]
+            
+            Asize=value['Asize']
+            Bsize=value['Bsize']
+            window=value['window']
+            
+            arr_tS=value['tS']
+            tS_avg=np.mean(arr_tS)
+            tS_stdev=np.std(arr_tS)
+            arr_t50=value['t50']
+            t50_avg=np.mean(arr_t50)
+            t50_stdev=np.std(arr_t50)
+            
+            section=section_format_string.format(Asize=Asize, Bsize=Bsize, window=window, n=len(arr_tS), tS_avg=tS_avg, tS_stdev=tS_stdev, t50_avg=t50_avg, t50_stdev=t50_stdev)
+            f.writelines(section)
+
 def save_inv(chrom, outdir='./', outname=None):
     """
     save the chromosome in a re-runnable file format
@@ -79,6 +136,8 @@ def save_inv(chrom, outdir='./', outname=None):
 def parse_inv_file(file):
     """
     parse a chromosome from a .inv file
+
+    returns a Chrom object, a dictionary of the simulation results, and timestamp
     """
 
     with open(file, 'r') as f:
@@ -115,7 +174,7 @@ def parse_inv_file(file):
         AB_conv=int(results[5])
 
         # set up the return values
-        ts=head[0]
+        ts=head[0].replace('# timestamp ', '')
         chrom=Chrom(Asize=Asize, Bsize=Bsize, level_of_convergence=loc, window_size=ws, inversion_cuts=cuts, timestamp=ts)
         results_dict={'t100': t100,
                       't50': t50,
@@ -211,7 +270,8 @@ def create_parser():
     parser.add_argument('-G', '--gif', action='store_true', help="create an animated GIF of the simulation process")
     
     # other
-    parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (optional)")
+    parser.add_argument('-m', '--collect-minv', action='store_true', help="collect average t50 and m from .inv files in --output-dir")
+    parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (optional, use pwd if omitted)")
     
     return parser
 
