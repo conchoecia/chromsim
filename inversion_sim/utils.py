@@ -57,8 +57,18 @@ def collect_minv(outdir='./', outname=None):
 n={n}
 tS_avg={tS_avg}
 tS_stdev={tS_stdev}
+tS_median={tS_median}
+tS_q1={tS_q1}
+tS_q3={tS_q3}
+tS_min={tS_min}
+tS_max={tS_max}
 t50_avg={t50_avg}
 t50_stdev={t50_stdev}
+t50_median={t50_median}
+t50_q1={t50_q1}
+t50_q3={t50_q3}
+t50_min={t50_min}
+t50_max={t50_max}
 
 """
 
@@ -96,11 +106,39 @@ t50_stdev={t50_stdev}
             arr_tS=value['tS']
             tS_avg=np.mean(arr_tS)
             tS_stdev=np.std(arr_tS)
+            tS_median=np.median(arr_tS)
+            tS_q1=np.quantile(arr_tS, 0.25)
+            tS_q3=np.quantile(arr_tS, 0.75)
+            tS_min=np.min(arr_tS)
+            tS_max=np.max(arr_tS)
             arr_t50=value['t50']
             t50_avg=np.mean(arr_t50)
             t50_stdev=np.std(arr_t50)
+            t50_median=np.median(arr_t50)
+            t50_q1=np.quantile(arr_t50, 0.25)
+            t50_q3=np.quantile(arr_t50, 0.75)
+            t50_min=np.min(arr_t50)
+            t50_max=np.max(arr_t50)
             
-            section=section_format_string.format(Asize=Asize, Bsize=Bsize, window=window, n=len(arr_tS), tS_avg=tS_avg, tS_stdev=tS_stdev, t50_avg=t50_avg, t50_stdev=t50_stdev)
+            section=section_format_string.format(Asize=Asize,
+                                                 Bsize=Bsize,
+                                                 window=window,
+                                                 n=len(arr_tS),
+                                                 tS_avg=tS_avg,
+                                                 tS_stdev=tS_stdev,
+                                                 tS_median=tS_median,
+                                                 tS_q1=tS_q1,
+                                                 tS_q3=tS_q3,
+                                                 tS_min=tS_min,
+                                                 tS_max=tS_max,
+                                                 t50_avg=t50_avg,
+                                                 t50_stdev=t50_stdev,
+                                                 t50_median=t50_median,
+                                                 t50_q1=t50_q1,
+                                                 t50_q3=t50_q3,
+                                                 t50_min=t50_min,
+                                                 t50_max=t50_max)
+            
             f.writelines(section)
 
 def save_inv(chrom, outdir='./', outname=None):
