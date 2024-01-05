@@ -186,14 +186,17 @@ def parse_minv_file(file):
         for line in f:
             match line[0]:
                 case '#': # section heading
-                    section_key=line
+                    arr=line.split(' ')
+                    Asize=int(arr[1].split(':')[1])
+                    Bsize=int(arr[2].split(':')[1])
+                    window=int(arr[3].split(':')[1])
+                    
+                    section_key=(Asize+Bsize, window)
                     sections[section_key]={}
                     
-                    arr=line.split(' ')
-                    
-                    sections[line]['Asize']=int(arr[1].split(':')[1])
-                    sections[line]['Bsize']=int(arr[2].split(':')[1])
-                    sections[line]['window']=int(arr[3].split(':')[1])
+                    sections[section_key]['Asize']=int(arr[1].split(':')[1])
+                    sections[section_key]['Bsize']=int(arr[2].split(':')[1])
+                    sections[section_key]['window']=int(arr[3].split(':')[1])
                     
                 case '\n': # new line, i.e. end of section
                     pass

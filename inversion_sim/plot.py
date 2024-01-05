@@ -118,42 +118,50 @@ def plot_minv(outdir, outname):
     plot a boxplot of the average tS and t50, respectively
     """
 
-    figsize=(25, 10)
-    fig=plt.figure(figsize=figsize)
-    gs=fig.add_gridspec(1, 2)
-    ax0=fig.add_subplot(gs[0, 0])
-    ax1=fig.add_subplot(gs[0, 1])
-
-    xlabel='chromosome size'
-    ax0.set_xlabel(xlabel)
-    ax0.set_ylabel(r'\tau_S')
-    ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(r'\tau_{50}')
-
-    fig.suptitle(r"average \tau_S and \tau_{50}")
-
     sections=utils.parse_minv_file(outdir+outname)
 
-    tS_stats=[]
-    t50_stats=[]
-    print(sections.keys())
-    input()
+    tS_stats={k[1]: [] for k in sections.keys()}
+    t50_stats={k[1]: [] for k in sections.keys()}
     for section_key in sections:
         section=sections[section_key]
-        tS_stats.append({'med': section['tS_median'],
-                         'q1': section['tS_q1'],
-                         'q3': section['tS_q3'],
-                         'whislo': section['tS_min'],
-                         'whishi': section['tS_max']})
-        t50_stats.append({'med': section['t50_median'],
-                         'q1': section['t50_q1'],
-                         'q3': section['t50_q3'],
-                         'whislo': section['t50_min'],
-                         'whishi': section['t50_max']})
+        tS_stats[section_key[1]].append({'med': section['tS_median'],
+                                  'q1': section['tS_q1'],
+                                  'q3': section['tS_q3'],
+                                  'whislo': section['tS_min'],
+                                  'whishi': section['tS_max'],
+                                  'label': str(section_key[0])+" genes"})
+        t50_stats[section_key[1]].append({'med': section['t50_median'],
+                                   'q1': section['t50_q1'],
+                                   'q3': section['t50_q3'],
+                                   'whislo': section['t50_min'],
+                                   'whishi': section['t50_max'],
+                                   'label': str(section_key[0])+" genes"})
 
-    print(tS_stats)
-    ax0.bxp(tS_stats, showfliers=False)
-    ax1.bxp(t50_stats, showfliers=False)
+    figsize=(25, 10)
+    fig=plt.figure(figsize=figsize)
+    section_count=len(sections)
+    gs=fig.add_gridspec(2, section_count)
+    tS_axes={}
+    t50_axes={}
+    section_keys=sorted(tS_stats.keys())
+    for i in range(0, section_count):
+        print(i)
+        ax0=fig.add_subplot(gs[0, i])
+        if i == 0:
+            ax0.set_ylabel(r"$\tau_S$")
+        ax0.set_title("window size "+str(section_keys[i]))
+        #tS_axes[section_keys[i]]=ax0
+        stats=tS_stats[section_keys[i]]
+        ax0.bxp(stats, showfliers=False)
+        
+        ax1=fig.add_subplot(gs[1, i])
+        if i == 0:
+            ax1.set_ylabel(r"$\tau_{50}$")
+        #ax1.set_title("window size "+str(section_keys[i]))
+        #t50_axes[section_keys[i]]=ax1
+        ax1.bxp(t50_stats[section_keys[i]], showfliers=False)
+
+    fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
 
     save_fig(outdir, outname)
 
