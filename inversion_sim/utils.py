@@ -171,6 +171,41 @@ def save_inv(chrom, outdir='./', outname=None):
         for cut in chrom.inversion_cuts:
             f.write('{}\t{}\n'.format(cut[0], cut[1]))
 
+def parse_minv_file(file):
+    """
+    parse the collected data from a .minv file
+
+    returns a dictionary of dictionaries, each containing the values Asize, Bsize, window, n, tS_avg, tS_stdev, t50_avg, t50_stdev
+    """
+    
+    sections={}
+    
+    with open(file+'.minv', 'r') as f:
+        section_key=''
+        
+        for line in f:
+            match line[0]:
+                case '#': # section heading
+                    section_key=line
+                    sections[section_key]={}
+                    
+                    arr=line.split(' ')
+                    
+                    sections[line]['Asize']=int(arr[1].split(':')[1])
+                    sections[line]['Bsize']=int(arr[2].split(':')[1])
+                    sections[line]['window']=int(arr[3].split(':')[1])
+                    
+                case '\n': # new line, i.e. end of section
+                    pass
+                
+                case _: # section content
+                    arr=line.split('=')
+                    key=arr[0]
+                    val=float(arr[1])
+                    sections[section_key][key]=val
+
+        return sections
+
 def parse_inv_file(file):
     """
     parse a chromosome from a .inv file
