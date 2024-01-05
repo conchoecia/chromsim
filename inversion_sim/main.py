@@ -68,6 +68,10 @@ def main():
     if args['collect_minv']:
         outname=args['filename']
         utils.collect_minv(outdir, outname)
+
+    if args['plot_minv']:
+        outname=args['filename']
+        plot.plot_minv(outdir, outname)
         
     end=time.time()
     elapsed=end-start

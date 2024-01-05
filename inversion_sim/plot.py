@@ -113,6 +113,50 @@ def set_up_trace_fig(chrom):
     
     return fig, ax0, ax1, ax2, ax3
 
+def plot_minv(outdir, outname):
+    """
+    plot a boxplot of the average tS and t50, respectively
+    """
+
+    figsize=(25, 10)
+    fig=plt.figure(figsize=figsize)
+    gs=fig.add_gridspec(1, 2)
+    ax0=fig.add_subplot(gs[0, 0])
+    ax1=fig.add_subplot(gs[0, 1])
+
+    xlabel='chromosome size'
+    ax0.set_xlabel(xlabel)
+    ax0.set_ylabel(r'\tau_S')
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(r'\tau_{50}')
+
+    fig.suptitle(r"average \tau_S and \tau_{50}")
+
+    sections=utils.parse_minv_file(outdir+outname)
+
+    tS_stats=[]
+    t50_stats=[]
+    print(sections.keys())
+    input()
+    for section_key in sections:
+        section=sections[section_key]
+        tS_stats.append({'med': section['tS_median'],
+                         'q1': section['tS_q1'],
+                         'q3': section['tS_q3'],
+                         'whislo': section['tS_min'],
+                         'whishi': section['tS_max']})
+        t50_stats.append({'med': section['t50_median'],
+                         'q1': section['t50_q1'],
+                         'q3': section['t50_q3'],
+                         'whislo': section['t50_min'],
+                         'whishi': section['t50_max']})
+
+    print(tS_stats)
+    ax0.bxp(tS_stats, showfliers=False)
+    ax1.bxp(t50_stats, showfliers=False)
+
+    save_fig(outdir, outname)
+
 def plot_dotplot(chrom, ax, x, y):
     """
     plot a dotplot between two gene lists

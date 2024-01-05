@@ -344,6 +344,7 @@ def create_parser():
     
     # other
     parser.add_argument('-m', '--collect-minv', action='store_true', help="collect average t50 and m from .inv files in --output-dir")
+    parser.add_argument('-p', '--plot-minv', action='store_true', help="plot the data in the given .minv file")
     parser.add_argument('-o', '--output-dir', default=os.getcwd(), help="directory in which to store the output of the program (optional, use pwd if omitted)")
     
     return parser
