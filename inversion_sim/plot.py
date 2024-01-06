@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+import matplotlib.scale as scl
 import matplotlib as mpl
 from scipy import stats
 from scipy import optimize as opt
@@ -122,7 +123,7 @@ def plot_minv(outdir, outname):
 
     tS_stats={k[1]: [] for k in sections.keys()}
     t50_stats={k[1]: [] for k in sections.keys()}
-    for section_key in sections:
+    for section_key in sorted(sections.keys()):
         section=sections[section_key]
         tS_stats[section_key[1]].append({'med': section['tS_median'],
                                   'q1': section['tS_q1'],
@@ -140,26 +141,23 @@ def plot_minv(outdir, outname):
     figsize=(25, 10)
     fig=plt.figure(figsize=figsize)
     section_count=len(sections)
-    gs=fig.add_gridspec(2, section_count)
-    tS_axes={}
-    t50_axes={}
-    section_keys=sorted(tS_stats.keys())
-    for i in range(0, section_count):
-        print(i)
+    windows=sorted(tS_stats.keys())
+    gs=fig.add_gridspec(2, len(windows))
+    for i in range(0, len(windows)):
         ax0=fig.add_subplot(gs[0, i])
         if i == 0:
             ax0.set_ylabel(r"$\tau_S$")
-        ax0.set_title("window size "+str(section_keys[i]))
-        #tS_axes[section_keys[i]]=ax0
-        stats=tS_stats[section_keys[i]]
+        ax0.set_title("window size "+str(windows[i]))
+        ax0.set_yscale('log')
+        stats=tS_stats[windows[i]]
         ax0.bxp(stats, showfliers=False)
         
         ax1=fig.add_subplot(gs[1, i])
         if i == 0:
             ax1.set_ylabel(r"$\tau_{50}$")
-        #ax1.set_title("window size "+str(section_keys[i]))
-        #t50_axes[section_keys[i]]=ax1
-        ax1.bxp(t50_stats[section_keys[i]], showfliers=False)
+        ax1.set_yscale('log')
+        stats=t50_stats[windows[i]]
+        ax1.bxp(stats, showfliers=False)
 
     fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
 
