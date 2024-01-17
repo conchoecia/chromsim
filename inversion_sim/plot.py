@@ -151,13 +151,17 @@ def plot_minv(outdir, outname):
         ax0.set_yscale('log')
         stats=tS_stats[windows[i]]
         ax0.bxp(stats, showfliers=False)
-        
+        for tick in ax0.get_xticklabels():
+            tick.set_rotation(-45)
+            
         ax1=fig.add_subplot(gs[1, i])
         if i == 0:
             ax1.set_ylabel(r"$\tau_{50}$")
         ax1.set_yscale('log')
         stats=t50_stats[windows[i]]
         ax1.bxp(stats, showfliers=False)
+        for tick in ax1.get_xticklabels():
+            tick.set_rotation(-45)
 
     fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
 
