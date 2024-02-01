@@ -7,6 +7,7 @@ import collections.abc as abc
 import argparse as ap
 import numpy as np
 import pandas as pd
+import itertools as iter
 from datetime import datetime as dt
 from pathlib import Path
 from chromosome import Chrom
@@ -179,6 +180,8 @@ def parse_minv_file(file):
     """
     
     sections={}
+    windows=[]
+    ABs=[]
     
     with open(file+'.minv', 'r') as f:
         section_key=''
@@ -190,13 +193,20 @@ def parse_minv_file(file):
                     Asize=int(arr[1].split(':')[1])
                     Bsize=int(arr[2].split(':')[1])
                     window=int(arr[3].split(':')[1])
+
+                    if (Asize+Bsize) not in ABs:
+                        ABs.append((Asize+Bsize, Asize, Bsize))
+                    if (window not in windows):
+                        windows.append(window)
                     
                     section_key=(Asize+Bsize, window)
-                    sections[section_key]={}
+                    sections[section_key]={'Asize': int(arr[1].split(':')[1]),
+                                           'Bsize': int(arr[2].split(':')[1]),
+                                           'window': int(arr[3].split(':')[1])}
                     
-                    sections[section_key]['Asize']=int(arr[1].split(':')[1])
-                    sections[section_key]['Bsize']=int(arr[2].split(':')[1])
-                    sections[section_key]['window']=int(arr[3].split(':')[1])
+                    #sections[section_key]['Asize']=int(arr[1].split(':')[1])
+                    #sections[section_key]['Bsize']=int(arr[2].split(':')[1])
+                    #sections[section_key]['window']=int(arr[3].split(':')[1])
                     
                 case '\n': # new line, i.e. end of section
                     pass
@@ -207,6 +217,31 @@ def parse_minv_file(file):
                     val=float(arr[1])
                     sections[section_key][key]=val
 
+        for (AB, window) in iter.product(ABs, windows):
+            #print(str(r) + ": " + str(r in sections.keys()))
+            section_key=(AB[0], window)
+            Asize=AB[1]
+            Bsize=AB[2]
+            if section_key not in sections.keys():
+                sections[section_key]={'Asize': Asize,
+                                       'Bsize': Bsize,
+                                       'window': window,
+                                       'n': 0,
+                                       'tS_avg': 0,
+                                       'tS_stdev': 0,
+                                       'tS_median': 0,
+                                       'tS_q1': 0,
+                                       'tS_q3': 0,
+                                       'tS_min': 0,
+                                       'tS_max': 0,
+                                       't50_avg': 0,
+                                       't50_stdev': 0,
+                                       't50_median': 0,
+                                       't50_q1': 0,
+                                       't50_q3': 0,
+                                       't50_min': 0,
+                                       't50_max': 0}
+        
         return sections
 
 def parse_inv_file(file):

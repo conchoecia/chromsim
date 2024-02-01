@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import matplotlib.scale as scl
+import matplotlib.patches as ptch
 import matplotlib as mpl
 from scipy import stats
 from scipy import optimize as opt
@@ -138,31 +139,44 @@ def plot_minv(outdir, outname):
                                    'whishi': section['t50_max'],
                                    'label': str(section_key[0])+" genes"})
 
-    figsize=(25, 10)
+    figsize=(20, 10)
     fig=plt.figure(figsize=figsize)
     section_count=len(sections)
     windows=sorted(tS_stats.keys())
-    gs=fig.add_gridspec(2, len(windows))
+    gs=fig.add_gridspec(1, 2)
+    
+    ax0=fig.add_subplot(gs[0, 0])
+    #ax0.set_title("window size "+str(windows[i]))
+    ax0.set_ylabel(r"$\tau_S$")
+    ax0.set_yscale('log')
+            
+    ax1=fig.add_subplot(gs[0, 1])
+    #ax1.set_title("window size "+str(windows[i]))
+    ax1.set_ylabel(r"$\tau_{50}$")
+    ax1.set_yscale('log')
+
+    #boxprops[dict(color='C' + str(i))]
+    handlers=[]
+    labels=[]
+    
     for i in range(0, len(windows)):
-        ax0=fig.add_subplot(gs[0, i])
-        if i == 0:
-            ax0.set_ylabel(r"$\tau_S$")
-        ax0.set_title("window size "+str(windows[i]))
-        ax0.set_yscale('log')
         stats=tS_stats[windows[i]]
-        ax0.bxp(stats, showfliers=False)
+        color='C'+str(i)
+        handlers.append(ptch.FancyBboxPatch((1, 1), 1, 1, color=color))
+        labels.append("ws="+str(windows[i]))
+        boxprops=dict(color=color)
+        medianprops=dict(color=color)
+        ax0.bxp(stats, showfliers=False, boxprops=boxprops, medianprops=medianprops)
         for tick in ax0.get_xticklabels():
             tick.set_rotation(-45)
-            
-        ax1=fig.add_subplot(gs[1, i])
-        if i == 0:
-            ax1.set_ylabel(r"$\tau_{50}$")
-        ax1.set_yscale('log')
+        
         stats=t50_stats[windows[i]]
-        ax1.bxp(stats, showfliers=False)
+        ax1.bxp(stats, showfliers=False, boxprops=boxprops, medianprops=medianprops)
         for tick in ax1.get_xticklabels():
             tick.set_rotation(-45)
 
+    ax0.legend(handlers, labels)
+    ax1.legend(handlers, labels)
     fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
 
     save_fig(outdir, outname)
