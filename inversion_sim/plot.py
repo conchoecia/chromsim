@@ -121,7 +121,7 @@ def plot_minv(outdir, outname):
     """
 
     sections=utils.parse_minv_file(outdir+outname)
-
+    
     tS_stats={k[1]: [] for k in sections.keys()}
     t50_stats={k[1]: [] for k in sections.keys()}
     for section_key in sorted(sections.keys()):
@@ -142,36 +142,37 @@ def plot_minv(outdir, outname):
     figsize=(20, 10)
     fig=plt.figure(figsize=figsize)
     section_count=len(sections)
-    windows=sorted(tS_stats.keys())
+    windows=sorted(list(set([section_key[1] for section_key in sections.keys()])))
+    chromsizes=[sorted([section_key[0] for section_key in sections.keys() if section_key[1] == window]) for window in windows]
+    
     gs=fig.add_gridspec(1, 2)
     
     ax0=fig.add_subplot(gs[0, 0])
-    #ax0.set_title("window size "+str(windows[i]))
     ax0.set_ylabel(r"$\tau_S$")
+    ax0.set_xlabel("chromosome size")
     ax0.set_yscale('log')
             
     ax1=fig.add_subplot(gs[0, 1])
-    #ax1.set_title("window size "+str(windows[i]))
     ax1.set_ylabel(r"$\tau_{50}$")
+    ax1.set_xlabel("chromosome size")
     ax1.set_yscale('log')
 
-    #boxprops[dict(color='C' + str(i))]
     handlers=[]
     labels=[]
     
     for i in range(0, len(windows)):
-        stats=tS_stats[windows[i]]
+        yvals=[stats['med'] for stats in tS_stats[windows[i]]]
         color='C'+str(i)
         handlers.append(ptch.FancyBboxPatch((1, 1), 1, 1, color=color))
         labels.append("ws="+str(windows[i]))
         boxprops=dict(color=color)
         medianprops=dict(color=color)
-        ax0.bxp(stats, showfliers=False, boxprops=boxprops, medianprops=medianprops)
+        ax0.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
         for tick in ax0.get_xticklabels():
             tick.set_rotation(-45)
         
-        stats=t50_stats[windows[i]]
-        ax1.bxp(stats, showfliers=False, boxprops=boxprops, medianprops=medianprops)
+        yvals=[stats['med'] for stats in t50_stats[windows[i]]]
+        ax1.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
         for tick in ax1.get_xticklabels():
             tick.set_rotation(-45)
 
