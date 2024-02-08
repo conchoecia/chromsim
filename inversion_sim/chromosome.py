@@ -155,13 +155,12 @@ class Chrom():
     def _calculate_convergence(self):
         """
         calculates the number of possible unique gene interactions
+        - not counting self interactions (i.e. tuples like (A.1, A.1))
+        - subtract 1 in the end to account for the fixity of the "telomeric" genes, (i.e. the first A gene and the last B gene can never interact)
         """
 
-        conv=0
-        for i in range(self.Asize+self.Bsize):
-            conv+=i
-        return conv-1
-
+        return (self.Asize+self.Bsize)*(self.Asize+self.Bsize-1)/2-1
+        
     def _pick_cut(self):
         """
         return a tuple of indices that represent the breakpoints of the next inversion
