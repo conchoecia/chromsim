@@ -43,9 +43,8 @@ class Chrom():
         self.m_sigma=-1
         self.m_mu=-1
         
-        # initialize the number of converged genes in both groups (i.e. the number of genes in group A that has seen all group B genes, and vice versa
-        self.converged_AtoB=0 # once these two numbers reach Asize and Bsize, respectively,
-        self.converged_BtoA=0 # AB_convergence is achieved
+        # initialize the counter for the unique pairings between groups
+        self.cross_pairings=0
         
         # initialize the traces that cumulatively track how many new interactions are added after each cycle
         self.trace={k:{0:(1 if k == 'A.1' or k == 'B.'+str(self.Bsize+1) else 2)} for k in self.gene_list}
@@ -109,8 +108,7 @@ class Chrom():
             if self.t100 < 0 and len(self.seen) >= self.converging_at:
                 self.t100=self.cycle
                 self.t100_gene_list=self.gene_list.copy()
-            if self.t50 >= 0 and self.AB_convergence < 0:
-                if self.converged_AtoB >= self.Asize and self.converged_BtoA >= self.Bsize:
+            if self.t50 >= 0 and self.AB_convergence < 0 and self.cross_pairings >= self.Asize*self.Bsize-1:
                     self.AB_convergence=self.cycle
 
         if show_output:
@@ -263,6 +261,9 @@ class Chrom():
                 if pair not in self.seen:
                     # udpate seen with the current cycle
                     self.seen[pair]=self.cycle
+                    # increment cross-group convergence counter if the new pairing is also one between groups
+                    if pair[0][0] != pair[1][0]:
+                        self.cross_pairings += 1
 
                     # skip the following steps if trace is False
                     if not trace:
@@ -288,21 +289,12 @@ class Chrom():
                                 self.trace_AtoB[this][self.cycle]=previous_value+1
                                 self.last_trace_AtoB_values[this]=previous_value+1
                                 self.trace_AtoB_mean[self.cycle]=np.mean([v for v in self.last_trace_AtoB_values.values()])
-                            # check whether the latest count of cross-group gene interactions for this gene is equal
-                            #   to the number of genes in the opposite group, increase counter for converged A-to-B genes
-                            # subtract 1 from the needed interactions if this gene is A.1 (telomeres stay intact and
-                            #   cannot interact with the other telomere)
-                            if self.trace_AtoB[pair[this_index]][self.cycle] == self.Bsize-(1 if this.split('.')[1] == '1' else 0):
-                                self.converged_AtoB+=1
                         if this.startswith("B") and other.startswith("A"):
                             if self.cycle > 0:
                                 previous_value=self.last_trace_BtoA_values[this]
                                 self.trace_BtoA[this][self.cycle]=previous_value+1
                                 self.last_trace_BtoA_values[this]=previous_value+1
                                 self.trace_BtoA_mean[self.cycle]=np.mean([v for v in self.last_trace_BtoA_values.values()])
-                            # same as above, but for B-to-A
-                            if self.trace_BtoA[this][self.cycle] == self.Asize-(1 if this.split('.')[1] == str(self.Bsize) else 0):
-                                self.converged_BtoA+=1
                 
     def _update_m(self, i0, i1):
         """
