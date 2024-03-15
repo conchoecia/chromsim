@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+import matplotlib.scale as scl
+import matplotlib.patches as ptch
 import matplotlib as mpl
 from scipy import stats
 from scipy import optimize as opt
@@ -112,6 +114,73 @@ def set_up_trace_fig(chrom):
     ax1.set_title(subplot1_title, fontsize=subplot_title_size)
     
     return fig, ax0, ax1, ax2, ax3
+
+def plot_minv(outdir, outname):
+    """
+    plot a boxplot of the average tS and t50, respectively
+    """
+
+    sections=utils.parse_minv_file(outdir+outname)
+    
+    tS_stats={k[1]: [] for k in sections.keys()}
+    t50_stats={k[1]: [] for k in sections.keys()}
+    for section_key in sorted(sections.keys()):
+        section=sections[section_key]
+        tS_stats[section_key[1]].append({'med': section['tS_median'],
+                                  'q1': section['tS_q1'],
+                                  'q3': section['tS_q3'],
+                                  'whislo': section['tS_min'],
+                                  'whishi': section['tS_max'],
+                                  'label': str(section_key[0])+" genes"})
+        t50_stats[section_key[1]].append({'med': section['t50_median'],
+                                   'q1': section['t50_q1'],
+                                   'q3': section['t50_q3'],
+                                   'whislo': section['t50_min'],
+                                   'whishi': section['t50_max'],
+                                   'label': str(section_key[0])+" genes"})
+
+    figsize=(20, 10)
+    fig=plt.figure(figsize=figsize)
+    section_count=len(sections)
+    windows=sorted(list(set([section_key[1] for section_key in sections.keys()])))
+    chromsizes=[sorted([section_key[0] for section_key in sections.keys() if section_key[1] == window]) for window in windows]
+    
+    gs=fig.add_gridspec(1, 2)
+    
+    ax0=fig.add_subplot(gs[0, 0])
+    ax0.set_ylabel(r"$\tau_S$")
+    ax0.set_xlabel("chromosome size")
+    ax0.set_yscale('log')
+            
+    ax1=fig.add_subplot(gs[0, 1])
+    ax1.set_ylabel(r"$\tau_{50}$")
+    ax1.set_xlabel("chromosome size")
+    ax1.set_yscale('log')
+
+    handlers=[]
+    labels=[]
+    
+    for i in range(0, len(windows)):
+        yvals=[stats['med'] for stats in tS_stats[windows[i]]]
+        color='C'+str(i)
+        handlers.append(ptch.FancyBboxPatch((1, 1), 1, 1, color=color))
+        labels.append("ws="+str(windows[i]))
+        boxprops=dict(color=color)
+        medianprops=dict(color=color)
+        ax0.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
+        for tick in ax0.get_xticklabels():
+            tick.set_rotation(-45)
+        
+        yvals=[stats['med'] for stats in t50_stats[windows[i]]]
+        ax1.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
+        for tick in ax1.get_xticklabels():
+            tick.set_rotation(-45)
+
+    ax0.legend(handlers, labels)
+    ax1.legend(handlers, labels)
+    fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
+
+    save_fig(outdir, outname)
 
 def plot_dotplot(chrom, ax, x, y):
     """
