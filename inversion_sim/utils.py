@@ -332,7 +332,7 @@ def create_parser():
     parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of genes assigned to linkage groups denoted by A and B.")
 
     # simulation
-    parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -c, -l, -w, and -t")
+    parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -n, -l, and -w")
     parser.add_argument('-a', '--asize', type=int, default=-1, help="integer value for the number of genes in group A")
     parser.add_argument('-b', '--bsize', type=int, default=-1, help="integer value for the number of genes in group B")
     parser.add_argument('-n', '--cycle-number', type=int, default=-1, help="integer value for the number of cycles to run (optional, run until converged if omitted)")
