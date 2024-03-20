@@ -1,4 +1,4 @@
-# /home/dogsoahC/downloads/HVU_RES_xy_reciprocal_best_hits.coloredby_BCnS_LGs.plotted.rbh
+# path/to/example.rbh
 
 fwm_event	organism	scaf	Asize	Bsize	m	cycles
 B1(x)B2	HVU	HVU7	195	132	1.049	1486
