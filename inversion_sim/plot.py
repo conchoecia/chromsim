@@ -338,7 +338,7 @@ def make_dotplot_gif(chrom, outdir, cycles, outname):
         
     animation=ani.FuncAnimation(fig, animate, repeat=True, frames=frames, interval=500)
     
-    animation.save(outname+'.gif', writer='imagemagick')
+    animation.save(outdir+outname+'.gif', writer='imagemagick')
 
 def plot_results(chrom, outdir, outname):
     """
