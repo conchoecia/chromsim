@@ -5,6 +5,8 @@ The purpose of chromsim is to simulate inversion events on a single (simplified)
 
 # Usage
 
+(Shell scripts showcasing the functionalities below can be found under `example_scripts/`.)
+
 ## General-purpose parameters
 
 A handful of arguments apply to all or most uses for this program. These are:
