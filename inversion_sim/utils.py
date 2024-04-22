@@ -239,7 +239,7 @@ def parse_inv_file(file):
         line=f.readline()
         while line != '':
             ints=list(map(int, line.rstrip().split('\t')))
-            cuts.append((ints[0], ints[1]))
+            cuts.append([ints[0], ints[1]])
             line=f.readline()
 
         # parse the parameters and results

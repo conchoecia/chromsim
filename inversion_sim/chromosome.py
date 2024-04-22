@@ -148,7 +148,7 @@ class Chrom():
             if k[1] >= lower_bound:
                 tS=k[0]
                 break
-        self.tS=tS   
+        self.tS=tS
         
     def _calculate_convergence(self):
         """
@@ -197,7 +197,7 @@ class Chrom():
         """
 
         self._invert()
-        self._update_cycle(self.inversion_cuts[-1], trace)
+        self._update_cycle(self.inversion_cuts[self.cycle], trace)
 
     def _invert(self):
         """
@@ -205,7 +205,8 @@ class Chrom():
         """
         
         cut=sorted(self._pick_cut())
-        self.inversion_cuts.append(cut)
+        if self.cycle >= len(self.inversion_cuts):
+            self.inversion_cuts.append(cut)
 
         i0 = cut[0]
         i1 = cut[1]
@@ -322,6 +323,7 @@ class Chrom():
         # caluculate the new number of transitions
         new_transitions=old_transitions+delta_transitions
 
+        #print((self.)
         # calculate the new m value and append to the data structure
         new_m=(new_transitions-1)/self.m_const
         self.trace_m[self.cycle]=new_m

@@ -350,6 +350,13 @@ def plot_results(chrom, outdir, outname):
     # calculate the upper bounds up to which should be plotted
     m_lim=chrom.tS*2+1
     lim=chrom.t100+1
+    #print(chrom.inversion_cuts[0])
+    #print(chrom.inversion_cuts[1010])
+    #print(chrom.inversion_cuts[1009])
+    #print(chrom.inversion_cuts[2019])
+    #print(chrom.trace_m)
+    print(chrom.tS)
+    print(len(chrom.inversion_cuts))
 
     # set up the fig
     fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
