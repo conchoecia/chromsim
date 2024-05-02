@@ -154,10 +154,12 @@ class Chrom():
         """
         calculates the number of possible unique gene interactions
         - not counting self interactions (i.e. tuples like (A.1, A.1))
+        - classic `n choose k` situation
         - subtract 1 in the end to account for the fixity of the "telomeric" genes, (i.e. the first A gene and the last B gene can never interact)
         """
+        from math import comb
 
-        return (self.Asize+self.Bsize)*(self.Asize+self.Bsize-1)/2-1
+        return comb(self.Asize+self.Bsize, 2)-1
         
     def _pick_cut(self):
         """
