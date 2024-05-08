@@ -239,7 +239,7 @@ def plot_t50(chrom, ax):
     plot a horizontal line at x=t50 on the given axis
     """
     
-    t50_text=r"$\tau_{{50\%}}={t50}$" "\n" "$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100)
+    t50_text=r"$\tau_{{50\%}}={t50}$" "\n" r"$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100)
     ax.text(x=chrom.t50, y=1, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
     ax.axvline(x=chrom.t50, lw=setlw*5, color='black')
 
