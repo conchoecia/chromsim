@@ -126,17 +126,11 @@ def plot_minv(outdir, outname):
     t50_stats={k[1]: [] for k in sections.keys()}
     for section_key in sorted(sections.keys()):
         section=sections[section_key]
-        tS_stats[section_key[1]].append({'med': section['tS_median'],
-                                  'q1': section['tS_q1'],
-                                  'q3': section['tS_q3'],
-                                  'whislo': section['tS_min'],
-                                  'whishi': section['tS_max'],
+        tS_stats[section_key[1]].append({'mean': section['tS_avg'],
+                                  'std': section['tS_stdev'],
                                   'label': str(section_key[0])+" genes"})
-        t50_stats[section_key[1]].append({'med': section['t50_median'],
-                                   'q1': section['t50_q1'],
-                                   'q3': section['t50_q3'],
-                                   'whislo': section['t50_min'],
-                                   'whishi': section['t50_max'],
+        t50_stats[section_key[1]].append({'mean': section['t50_avg'],
+                                   'std': section['t50_stdev'],
                                    'label': str(section_key[0])+" genes"})
 
     figsize=(20, 10)
@@ -161,18 +155,22 @@ def plot_minv(outdir, outname):
     labels=[]
     
     for i in range(0, len(windows)):
-        yvals=[stats['med'] for stats in tS_stats[windows[i]]]
+        yvals=[stats['mean'] for stats in tS_stats[windows[i]]]
+        stds=[stats['std'] for stats in tS_stats[windows[i]]]
         color='C'+str(i)
         handlers.append(ptch.FancyBboxPatch((1, 1), 1, 1, color=color))
         labels.append("ws="+str(windows[i]))
         boxprops=dict(color=color)
         medianprops=dict(color=color)
         ax0.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
+        ax0.errorbar(chromsizes[i], yvals, yerr=stds)
         for tick in ax0.get_xticklabels():
             tick.set_rotation(-45)
         
-        yvals=[stats['med'] for stats in t50_stats[windows[i]]]
+        yvals=[stats['mean'] for stats in t50_stats[windows[i]]]
+        stds=[stats['std'] for stats in t50_stats[windows[i]]]
         ax1.plot(chromsizes[i], yvals, 'D', color=color, markeredgecolor='black', linestyle='-')
+        ax1.errorbar(chromsizes[i], yvals, yerr=stds)
         for tick in ax1.get_xticklabels():
             tick.set_rotation(-45)
 
