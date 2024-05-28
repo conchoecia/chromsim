@@ -38,8 +38,9 @@ def main():
             a=args['group_a']
             b=args['group_b']
             c=args['chromosome']
+            o=args['organism']
 
-            Asize, Bsize, m=utils.from_rbh(rbh_file, a, b, c)
+            Asize, Bsize, m=utils.from_rbh(rbh_file, a, b, c, o)
             if not args['find_m']:
                 m=-1
             
@@ -58,7 +59,7 @@ def main():
         chrom.run(n=cycles, m=m, show_output=True, trace=False)
         utils.save_inv(chrom, outdir, outname)
         if rbh_file and args['find_m']:
-            utils.save_mc(chrom, rbh_file, c, a, b, m, outdir=outdir)
+            utils.save_mc(chrom, rbh_file, c, o, a, b, m, outdir=outdir)
     
     if args['plot']:
         source=args['source']

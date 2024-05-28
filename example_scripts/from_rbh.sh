@@ -25,13 +25,16 @@ echo
 echo "running simulation"
 echo "====="
 
-"$MAIN" -S -r "$RBH" -A B1 -B B2 -c HVU7 -M -f "$FILENAME_1" -o "$OUTDIR"
-"$MAIN" -S -r "$RBH" -A B1 -B B2 -c RES4 -M -f "$FILENAME_2" -o "$OUTDIR"
-"$MAIN" -S -r "$RBH" -A A1b -B B3 -c RES13 -M -f "$FILENAME_3" -o "$OUTDIR"
-"$MAIN" -S -r "$RBH" -A A1b -B B3 -c HVU8 -M -f "$FILENAME_4" -o "$OUTDIR"
+"$MAIN" -S -r "$RBH" -A "B1" -B "B2" -c "HVU7" -O "HVU" -M -f "$FILENAME""_1" -o "$OUTDIR"
+"$MAIN" -S -r "$RBH" -A "B1" -B "B2" -c "RES4" -O "RES" -M -f "$FILENAME""_2" -o "$OUTDIR"
+"$MAIN" -S -r "$RBH" -A "A1b" -B "B3" -c "RES13" -O "RES" -M -f "$FILENAME""_3" -o "$OUTDIR"
+"$MAIN" -S -r "$RBH" -A "A1b" -B "B3" -c "HVU8" -O "HVU" -M -f "$FILENAME""_4" -o "$OUTDIR"
 
-#echo
-#echo "plotting results"
-#echo "===="
-#
-#"$MAIN" -P -s "$OUTDIR/$FILENAME.inv" -o "$OUTDIR"
+echo
+echo "plotting results"
+echo "===="
+
+"$MAIN" -P -s "$OUTDIR/$FILENAME""_1.inv" -o "$OUTDIR"
+"$MAIN" -P -s "$OUTDIR/$FILENAME""_2.inv" -o "$OUTDIR"
+"$MAIN" -P -s "$OUTDIR/$FILENAME""_3.inv" -o "$OUTDIR"
+"$MAIN" -P -s "$OUTDIR/$FILENAME""_4.inv" -o "$OUTDIR"

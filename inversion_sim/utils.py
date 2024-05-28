@@ -17,7 +17,7 @@ CHROM_STORAGE_FILE_ENDING='.inv'
 META_FILE_ENDING='.minv'
 M_CYCLES_FILE_ENDING='.mc'
 
-def save_mc(chrom, rbh_file, chromosome, group_a, group_b, m, outdir='./'):
+def save_mc(chrom, rbh_file, chromosome, organism, group_a, group_b, m, outdir='./'):
     """
     save the results of an rbh-based simulation that has run until the observed entropy was reached
 
@@ -38,7 +38,7 @@ fwm_event\torganism\tscaf\tAsize\tBsize\tm\tcycles\n""".format(fname+'.rbh')
     # open the .mc file and append the given data
     with open(outdir+fname+M_CYCLES_FILE_ENDING, 'a') as f:
         line_format_string='{fwm}\t{org}\t{scaf}\t{a}\t{b}\t{m:.3f}\t{cyc}\n'
-        line=line_format_string.format(fwm=get_fwm_string(group_a, group_b), org=chromosome[0:3], scaf=chromosome, a=chrom.Asize, b=chrom.Bsize, m=m, cyc=chrom.cycle)
+        line=line_format_string.format(fwm=get_fwm_string(group_a, group_b), org=organism, scaf=chromosome, a=chrom.Asize, b=chrom.Bsize, m=m, cyc=chrom.cycle)
         f.writelines(line)
 
 def get_fwm_string(group_a, group_b):
@@ -268,8 +268,8 @@ def parse_inv_file(file):
         
         return chrom, results_dict, ts
 
-def from_rbh(path, group_a, group_b, chromosome):
-    organism=chromosome[0:3]
+def from_rbh(path, group_a, group_b, chromosome, organism):
+    #organism=chromosome[0:3]
     df=pd.read_csv(path, sep='\t').filter(items=['gene_group', organism+'_scaf', organism+'_pos'])
     df=df[df[organism+'_scaf'] == chromosome]
     df_a=df[df['gene_group'] == group_a]
@@ -352,7 +352,8 @@ def create_parser():
     parser.add_argument('-M', '--find-m', action='store_true', help="stop the simulation run when the entropy value found in the .rbh file has been reached (optional, run until convergence if omitted)")
     parser.add_argument('-A', '--group-a', type=str, default=None, help="the ALG in the .rbh file to be used as group A (required for --rbh)")
     parser.add_argument('-B', '--group-b', type=str, default=None, help="the ALG in the .rbh file to be used as group B (required for --rbh)")
-    parser.add_argument('-c', '--chromosome', type=str, default=None, help="name of the chromosome (or scaffold) where the two groups are mixed")
+    parser.add_argument('-c', '--chromosome', type=str, default=None, help="name of the chromosome (or scaffold) where the two groups are mixed (required for --rbh)")
+    parser.add_argument('-O', '--organism', type=str, default=None, help="name of the organism (required for --rbh)")
     
     # plotting
     parser.add_argument('-P', '--plot', action='store_true', help="plot a chromosome specified by -s")
