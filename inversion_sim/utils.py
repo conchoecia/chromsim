@@ -3,6 +3,7 @@ This file contains various utility functions for the program, like plotting and 
 """
 
 import os
+import sys
 import collections.abc as abc
 import argparse as ap
 import numpy as np
@@ -325,11 +326,18 @@ class FloatRange(abc.Container):
         self.n+=self.step
         return self.n-self.step
 
+class ChromsimParser(ap.ArgumentParser):
+    
+    def error(self, message):
+        sys.stderr.write('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
 def create_parser():
     """
     creates an argparse parser for the CLI arguments
     """
-    parser=ap.ArgumentParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of genes assigned to linkage groups denoted by A and B.")
+    parser=ChromsimParser(prog="inversion_sim", description="This program simulates inversion events of a chromosome made up of genes assigned to linkage groups denoted by A and B.")
 
     # simulation
     parser.add_argument('-S', '--simulate', action='store_true', help="simulate a chromosome with the parameters -a, -b, -n, -l, and -w")
