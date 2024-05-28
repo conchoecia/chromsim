@@ -176,7 +176,7 @@ def plot_minv(outdir, outname):
 
     ax0.legend(handlers, labels)
     ax1.legend(handlers, labels)
-    fig.suptitle(r"average $\tau_S$ and $\tau_{50}$")
+    fig.suptitle(r"average $\tau_S$ and $\tau_{50}$", fontsize=plot_title_size)
 
     save_fig(outdir, outname)
 
@@ -237,11 +237,11 @@ def plot_t50(chrom, ax):
     plot a horizontal line at x=t50 on the given axis
     """
     
-    t50_text=r"$\tau_{{50\%}}={t50}$" "\n" r"$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100)
+    t50_text=r"$\tau_{{50\%}}={t50}$" "\n" r"$({perc:.2f}\%\ of\ cycles)$".format(t50=chrom.t50, perc=chrom.t50/chrom.cycle*100) if chrom.t50 >= 0 else ""
     ax.text(x=chrom.t50, y=1, ha='left', va='center', s=t50_text, bbox=bbox, fontsize=text_size)
     ax.axvline(x=chrom.t50, lw=setlw*5, color='black')
 
-def plot_m(chrom, ax_m, ax_norm):
+def plot_m(chrom, ax_m, ax_norm, mark_m=-1):
     """
     plot the m value curve and the normal distribution (on a separate plot ax_norm)
 
@@ -261,11 +261,15 @@ def plot_m(chrom, ax_m, ax_norm):
     normpdf/=max(normpdf)
     upper_bound=chrom.m_mu+1.96*chrom.m_sigma
     lower_bound=chrom.m_mu-1.96*chrom.m_sigma
-    
+    greater_than_mark_m_positions=[k for k in chrom.trace_m if chrom.trace_m[k] >= mark_m]
+    mark_m_pos=greater_than_mark_m_positions[0]
+    #lowerx=max(chrom.tS*2+1, mark_m_pos)
+
     ax_m.plot(cycles[:chrom.tS*2+1], m_values[:chrom.tS*2+1], lw=setlw*2, color='blue', label=r"$m$")
     
     # plot 95 percentile of m value normal distribution
-    crossed_text="first 95 percentile value:\n{cross} cycles\n({perc:.2f}% of t50)".format(cross=chrom.tS, perc=chrom.tS/chrom.t50*100)
+    crossed_text="first 95 percentile value:\n{cross} cycles".format(cross=chrom.tS)
+    mark_text="observed m reached at:\n{mark} cycles".format(mark=mark_m_pos)
     norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=25)
     ax_m.axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
     ax_m.axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
@@ -274,6 +278,10 @@ def plot_m(chrom, ax_m, ax_norm):
     ax_m.fill_between(cycles, lower_bound, upper_bound, color='red', alpha=0.1) # shade area between the bounds of the 95 percentile
     ax_m.axvline(x=chrom.tS, lw=setlw*5, color='black') # plot the x value where the m value first enters the 95 percentile
     ax_m.text(x=chrom.tS, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox, fontsize=text_size)
+    
+    if mark_m >= 0:
+        ax_m.axvline(x=mark_m_pos, lw=setlw*5, color='green') # plot the x value where the m value is bigger than mark_m for the first time
+        ax_m.text(x=mark_m_pos, y=0.2, ha='left', va='center', s=mark_text, bbox=bbox, fontsize=text_size)
     
     # plot normal distribution next to m plot
     ax_norm.plot(normpdf, pdf_space, lw=setlw*5, color='red', label=norm_label) # plot the normal distribution of the m values along the y axis
@@ -287,7 +295,7 @@ def save_fig(outdir, outname):
     plt.savefig(outdir+outname+'.pdf')
     plt.savefig(outdir+outname+'.png')
     
-def plot_chrom(source, outdir, gif=False):
+def plot_chrom(source, outdir, gif=False, mark_m=-1, title=''):
     """
     plot a chromosome from a .inv source
     """
@@ -306,7 +314,7 @@ def plot_chrom(source, outdir, gif=False):
     else:
         chrom.run(len(chrom.inversion_cuts))
 
-        plot_results(chrom, outdir, outname)
+        plot_results(chrom, outdir, outname, mark_m, title)
 
         
 def make_dotplot_gif(chrom, outdir, cycles, outname):
@@ -338,7 +346,7 @@ def make_dotplot_gif(chrom, outdir, cycles, outname):
     
     animation.save(outdir+outname+'.gif', writer='imagemagick')
 
-def plot_results(chrom, outdir, outname):
+def plot_results(chrom, outdir, outname, mark_m=-1, title=''):
     """
     plot the results of a simulated chromosome
     """
@@ -351,6 +359,8 @@ def plot_results(chrom, outdir, outname):
 
     # set up the fig
     fig, ax0, ax1, ax2, ax3=set_up_trace_fig(chrom)
+    fig.suptitle(title+' (trace)' if title != '' else '', fontsize=plot_title_size)
+    
 
     # plot traces
     plot_trace(chrom, chrom.trace, lim, ax0, chrom.trace_mean, 'black', all_alpha)
@@ -361,7 +371,7 @@ def plot_results(chrom, outdir, outname):
     plot_trace(chrom, chrom.trace_BtoA, m_lim, ax3, chrom.trace_BtoA_mean, 'blue', B_alpha)  
 
     plot_t50(chrom, ax0)
-    plot_m(chrom, ax1, ax2)
+    plot_m(chrom, ax1, ax2, mark_m)
     
     # set legends
     ax1.legend(facecolor=fc, framealpha=box_alpha, edgecolor=ec)
@@ -384,6 +394,7 @@ def plot_results(chrom, outdir, outname):
 
     # set up the fig
     fig, ax0, ax1, ax2, ax3=set_up_dot_fig(chrom)
+    fig.suptitle(title+' (dotplot)' if title != '' else '', fontsize=plot_title_size)
 
     # plot dotplots
     plot_dotplot(chrom, ax0, original_genes, final_genes)

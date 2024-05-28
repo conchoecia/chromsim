@@ -64,7 +64,9 @@ def main():
     if args['plot']:
         source=args['source']
         gif=args['gif']
-        plot.plot_chrom(source, outdir, gif)
+        mark_m=args['mark_m']
+        title=args['plot_title']
+        plot.plot_chrom(source, outdir, gif, mark_m, title)
 
     if args['collect_minv']:
         outname=args['filename']

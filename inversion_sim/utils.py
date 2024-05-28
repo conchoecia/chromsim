@@ -358,7 +358,9 @@ def create_parser():
     # plotting
     parser.add_argument('-P', '--plot', action='store_true', help="plot a chromosome specified by -s")
     parser.add_argument('-s', '--source', type=str, help="the .inv file to load")
+    parser.add_argument('-x', '--mark-m', type=float, default=-1, help="the .inv file to load")
     parser.add_argument('-G', '--gif', action='store_true', help="create an animated GIF of the simulation process")
+    parser.add_argument('-t', '--plot-title', type=str, help="title to add to plots (optional, no title if omitted)")
     
     # other
     parser.add_argument('-m', '--collect-minv', action='store_true', help="collect average t50 and tS from .inv files in --output-dir")
