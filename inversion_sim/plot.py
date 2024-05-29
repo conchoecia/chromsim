@@ -242,7 +242,7 @@ def plot_t50(chrom, ax):
     ax.axvline(x=chrom.t50, lw=setlw*5, color='black')
 
 def plot_m(chrom, ax_m, ax_norm, mark_m=-1):
-    """
+    r"""
     plot the m value curve and the normal distribution (on a separate plot ax_norm)
 
          ax_m    ax_norm
@@ -269,7 +269,7 @@ def plot_m(chrom, ax_m, ax_norm, mark_m=-1):
     
     # plot 95 percentile of m value normal distribution
     crossed_text="first 95 percentile value:\n{cross} cycles".format(cross=chrom.tS)
-    mark_text="observed m reached at:\n{mark} cycles".format(mark=mark_m_pos)
+    mark_text="{m:.2f} reached at:\n{mark} cycles".format(m=chrom.trace_m[mark_m_pos], mark=mark_m_pos)
     norm_label=r"normal distribution of $m$" "\n" "(excluding the first {perc}% of cycles)".format(perc=25)
     ax_m.axhline(y=upper_bound, color='red', lw=setlw*5, ls=':') # plot upper bound of the 95 percentile
     ax_m.axhline(y=lower_bound, color='red', lw=setlw*5, ls=':') # plot lower bound of the 95 percentile
@@ -280,7 +280,11 @@ def plot_m(chrom, ax_m, ax_norm, mark_m=-1):
     ax_m.text(x=chrom.tS, y=0.4, ha='left', va='center', s=crossed_text, bbox=bbox, fontsize=text_size)
     
     if mark_m >= 0:
-        ax_m.axvline(x=mark_m_pos, lw=setlw*5, color='green') # plot the x value where the m value is bigger than mark_m for the first time
+        print(chrom.trace_m[mark_m_pos])
+        print(ax_m.get_ylim()[0])
+        print(chrom.trace_m[mark_m_pos]/ax_m.get_ylim()[0])
+        ax_m.axvline(x=mark_m_pos, ymin=0, ymax=chrom.trace_m[mark_m_pos]/(ax_m.get_ylim()[1]-ax_m.get_ylim()[0]), lw=setlw*5, color='green') # plot the x value where the m value is bigger than mark_m for the first time
+        ax_m.axhline(y=chrom.trace_m[mark_m_pos], xmin=0, xmax=mark_m_pos/ax_m.get_xlim()[1], lw=setlw*5, color='green') # plot the y value where the m value is bigger than mark_m for the first time
         ax_m.text(x=mark_m_pos, y=0.2, ha='left', va='center', s=mark_text, bbox=bbox, fontsize=text_size)
     
     # plot normal distribution next to m plot
