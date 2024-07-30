@@ -9,6 +9,7 @@ import utils
 import plot
 import time
 import os
+import sys
 
 def main():
     # handle command line arguments
@@ -82,4 +83,7 @@ def main():
     print("\nelapsed time: "+elapsed_string)
     
 if __name__ == "__main__":
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 10):
+        raise Exception("must be using Python 3.10 or above")
+
     main()
