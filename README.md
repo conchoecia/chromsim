@@ -3,6 +3,15 @@ chromsim
 
 The purpose of chromsim is to simulate inversion events on a single (simplified) chromosome in order to to analyze its entropic behavior (for the definition of this gene mixing entropy, see [Schultz, D.T., et al. (2023)](https://www.nature.com/articles/s41586-023-05936-6), Supplementary Information p.81) over time in a fusion-with-mixing (FWM) scenario. Such a chromosome consists of equidistant genes assigned to two linkage groups (LGs) **A** and **B**. Initially, the two groups are cleanly separated (emulating the situation after a recent fusion or translocation event), before a series of random inversions are performed. Through this process, it is possible to estimate how many inversions it would take to reach a certain entropy value observed in reality. In addition to simulating a single chromosome's fate and plotting it, chromsim also offers the ability to collate the results for many runs and calculate averages or compare the behvaior under different parameter sets.
 
+# Dependencies
+
+chromsim requires your Python version to be 3.10 or later. Please make sure you have the following Python packages available on your system:
+
+- `numpy`
+- `scipy`
+- `pandas`
+- `matplotlib`
+
 # Usage
 
 (Shell scripts showcasing the functionalities below can be found under `example_scripts/`.)
