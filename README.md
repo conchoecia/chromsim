@@ -172,3 +172,13 @@ The commands used to produce these are
 > main.py -m --filename averages
 > main.py -p --filename averages
 ```
+
+# Citing chromsim
+
+If you use `chromsim` in your work, please cite the following paper:
+
+```
+> Schultz, D.T., Blümel, A., Destanović, D., Sarigol, F., & Simakov, O. (2024).
+> Topological mixing and irreversibility in animal chromosome evolution.
+> *bioRxiv*, 2024.07.29.605683. [https://doi.org/10.1101/2024.07.29.605683](https://doi.org/10.1101/2024.07.29.605683)
+```
