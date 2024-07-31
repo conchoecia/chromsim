@@ -3,18 +3,35 @@ chromsim
 
 The purpose of chromsim is to simulate inversion events on a single (simplified) chromosome in order to to analyze its entropic behavior (for the definition of this gene mixing entropy, see [Schultz, D.T., et al. (2023)](https://www.nature.com/articles/s41586-023-05936-6), Supplementary Information p.81) over time in a fusion-with-mixing (FWM) scenario. Such a chromosome consists of equidistant genes assigned to two linkage groups (LGs) **A** and **B**. Initially, the two groups are cleanly separated (emulating the situation after a recent fusion or translocation event), before a series of random inversions are performed. Through this process, it is possible to estimate how many inversions it would take to reach a certain entropy value observed in reality. In addition to simulating a single chromosome's fate and plotting it, chromsim also offers the ability to collate the results for many runs and calculate averages or compare the behvaior under different parameter sets.
 
-# Dependencies
+# Getting started
 
-chromsim requires your Python version to be 3.10 or later. Please make sure you have the following Python packages available on your system:
+## Prerequisites
 
-- `numpy`
-- `scipy`
-- `pandas`
-- `matplotlib`
+To use `chromsim`, make sure you have the following packages in the right versions available on your system:
+
+| package    | version [^1] |
+|------------|--------------|
+| Python     | >= 3.10      |
+| numpy      | >= 1.26.4    |
+| scipy      | >= 1.13.0    |
+| pandas     | >= 2.2.1     |
+| matplotlib | >= 3.8.4     |
+
+Linux: Arch and NixOS, kernel version 6.6.34[^1]
+
+[^1]: The code has been tested with these versions. Earlier versions may work, but have not been tested.
+
+## Installation
+
+To install `chromsim`, clone the repository or download and extract the ZIP file. Depending on your internet connection, this should take no more than a few seconds. Navigate to the directory of `main.py` (`inversion_sim/`), and you're good to go.
+
+## Runtime
+
+Simulations of chromosomes up to ~1000 "genes" are finished in approximately one minute even on older systems (Intel Core i5). Plotting takes approximately three times as long as simulating for a given system and parameter set.
 
 # Usage
 
-(Shell scripts showcasing the functionalities below can be found under `example_scripts/`.)
+(Shell scripts showcasing the functionalities below can be found under `example_scripts/`. They are ready to run as-is if you navigate there. If you wish to copy them to a different directory and run them there, or run them from a different working directory, be sure to adjust the paths in the scripts accordingly.)
 
 ## General-purpose parameters
 
