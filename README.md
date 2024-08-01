@@ -17,7 +17,12 @@ To use `chromsim`, make sure you have the following packages in the right versio
 | pandas     | >= 2.2.1     |
 | matplotlib | >= 3.8.4     |
 
-Linux: Arch and NixOS, kernel version 6.6.34[^1]
+## System requirements
+
+### Operating system
+
+NixOS, Linux kernel version 6.6.34[^1]
+Oracle Linux 9
 
 [^1]: The code has been tested with these versions. Earlier versions may work, but have not been tested.
 
@@ -27,7 +32,7 @@ To install `chromsim`, clone the repository or download and extract the ZIP file
 
 ## Runtime
 
-Simulations of chromosomes up to ~1000 "genes" are finished in approximately one minute even on older systems (Intel Core i5). Plotting takes approximately three times as long as simulating for a given system and parameter set.
+Individual simulation/plotting runs typically complete in < 10 seconds, depending on the chromosome size. GIF generation (see below) takes significantly longer (~20 seconds).
 
 # Usage
 
