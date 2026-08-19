@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the preferred citation below."
+title: "chromsim: simulation of gene mixing by inversion after chromosomal fusion"
+license: GPL-3.0
+repository-code: "https://github.com/conchoecia/chromsim"
+authors:
+  - family-names: Blümel
+    given-names: Arno
+  - family-names: Schultz
+    given-names: "Darrin T."
+preferred-citation:
+  type: article
+  title: "Topological mixing and irreversibility in animal chromosome evolution"
+  year: 2026
+  journal: "Science Advances"
+  volume: 12
+  issue: 34
+  number: "eadz5561"
+  doi: 10.1126/sciadv.adz5561
+  url: "https://doi.org/10.1126/sciadv.adz5561"
+  authors:
+    - family-names: Schultz
+      given-names: "Darrin T."
+    - family-names: Blümel
+      given-names: Arno
+    - family-names: Destanović
+      given-names: Dalila
+    - family-names: Sarigol
+      given-names: Fatih
+    - family-names: Simakov
+      given-names: Oleg
