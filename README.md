@@ -199,6 +199,8 @@ The commands used to produce these are
 
 If you use `chromsim` in your work, please cite the following paper:
 
-> Schultz, D.T., Blümel, A., Destanović, D., Sarigol, F., & Simakov, O. (2024).
+> Schultz, D.T., Blümel, A., Destanović, D., Sarigol, F., & Simakov, O. (2026).
 > Topological mixing and irreversibility in animal chromosome evolution.
-> *bioRxiv*, 2024.07.29.605683. [https://doi.org/10.1101/2024.07.29.605683](https://doi.org/10.1101/2024.07.29.605683)
+> *Science Advances*, **12**(34), eadz5561. [https://doi.org/10.1126/sciadv.adz5561](https://doi.org/10.1126/sciadv.adz5561)
+
+See also [`CITATION.cff`](CITATION.cff).
