@@ -28,7 +28,8 @@ echo "====="
 "$MAIN" -S -r "$RBH" -A "B1" -B "B2" -c "HVU7" -O "HVU" -M -f "$FILENAME""_1" -o "$OUTDIR"
 "$MAIN" -S -r "$RBH" -A "B1" -B "B2" -c "RES4" -O "RES" -M -f "$FILENAME""_2" -o "$OUTDIR"
 "$MAIN" -S -r "$RBH" -A "A1b" -B "B3" -c "RES13" -O "RES" -M -f "$FILENAME""_3" -o "$OUTDIR"
-"$MAIN" -S -r "$RBH" -A "A1b" -B "B3" -c "HVU8" -O "HVU" -M -f "$FILENAME""_4" -o "$OUTDIR"
+# A1b(x)B3 on HVU8 is not run with -M: its observed m (1.192) is above the largest m the
+# simulation can reach with 14 A and 51 B genes (1.165), so the run would never stop.
 
 echo
 echo "plotting results"
@@ -37,4 +38,3 @@ echo "===="
 "$MAIN" -P -s "$OUTDIR/$FILENAME""_1.inv" -o "$OUTDIR"
 "$MAIN" -P -s "$OUTDIR/$FILENAME""_2.inv" -o "$OUTDIR"
 "$MAIN" -P -s "$OUTDIR/$FILENAME""_3.inv" -o "$OUTDIR"
-"$MAIN" -P -s "$OUTDIR/$FILENAME""_4.inv" -o "$OUTDIR"

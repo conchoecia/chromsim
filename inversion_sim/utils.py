@@ -289,8 +289,9 @@ def from_rbh(path, group_a, group_b, chromosome, organism):
 
     m=calculate_m(chromstring)
     
-    Asize=df_a.size
-    Bsize=df_b.size
+    # number of genes (rows) in each group; DataFrame.size would count cells (rows x columns)
+    Asize=len(df_a)
+    Bsize=len(df_b)
 
     return Asize, Bsize, m
 
