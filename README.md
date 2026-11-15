@@ -101,7 +101,6 @@ chromsim accepts a `.rbh` file as input using the option `-r/--rbh path/to/file.
 > main.py -S -r path/to/example.rbh -A B1 -B B2 -c HVU7 -M
 > main.py -S -r path/to/example.rbh -A B1 -B B2 -c RES4 -M
 > main.py -S -r path/to/example.rbh -A A1b -B B3 -c RES13 -M
-> main.py -S -r path/to/example.rbh -A A1b -B B3 -c HVU8 -M
 .
 .
 .
@@ -113,14 +112,15 @@ the resulting tab-separated `example.mc` would look like this:
 # path/to/example.rbh
 
 fwm_event organism scaf  Asize Bsize m     cycles
-B1(x)B2   HVU      HVU7  195   132   1.049 1486
-B1(x)B2   RES      RES4  258   147   0.863 352
-A1b(x)B3  RES      RES13 60    174   0.939 334
-A1b(x)B3  HVU      HVU8  42    153   1.192 25868
+B1(x)B2   HVU      HVU7  65    44    1.049 125
+B1(x)B2   RES      RES4  86    49    0.863 146
+A1b(x)B3  RES      RES13 20    58    0.939 70
 .
 .
 .
 ```
+
+Note: before November 2026, the `.rbh` reader counted table cells instead of genes, so `-r` runs simulated linkage groups three times larger than observed (for example, `Asize` 195 instead of 65 for B1 on HVU7). `.mc` files written by earlier versions carry these tripled sizes, and their cycle counts come from the larger chromosomes.
  
 ## Plotting results
  
